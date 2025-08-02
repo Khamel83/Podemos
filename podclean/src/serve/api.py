@@ -6,6 +6,7 @@ from src.feed.meta_feed import build_meta_feed
 from src.store.db import init_db, get_session
 from src.store.models import Episode
 from src.processor.episode_processor import process_episode # To reprocess episode after mark
+from src.config.config_loader import load_app_config # Import config loader
 
 app = FastAPI()
 
@@ -20,11 +21,13 @@ class MarkRequest(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     init_db()
+    app_cfg = load_app_config()
+    app.base_url = app_cfg.get('PODCLEAN_BASE_URL', "http://localhost:8080") # Load base URL from config
 
 @app.get("/feed.xml")
 async def get_feed():
     # In a real application, base_url would come from config
-    base_url = "http://localhost:8080" # Placeholder
+    base_url = app.base_url # Use the base_url from app state
     feed_content = build_meta_feed(base_url)
     return Response(content=feed_content, media_type="application/xml")
 
@@ -32,14 +35,52 @@ async def get_feed():
 async def get_audio(episode_guid: str):
     with get_session() as session:
         episode = session.query(Episode).filter_by(source_guid=episode_guid).first()
-        if not episode or not episode.original_file_path:
+        if not episode or (not episode.cleaned_file_path and not episode.original_file_path):
             raise HTTPException(status_code=404, detail="Audio file not found.")
         
-        file_path = episode.original_file_path
+        file_path = episode.cleaned_file_path if episode.cleaned_file_path else episode.original_file_path
+        
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="Audio file not found on disk.")
         
         return FileResponse(path=file_path, media_type="audio/mpeg")
+
+@app.get("/transcripts/{episode_guid}.json")
+async def get_transcript(episode_guid: str):
+    with get_session() as session:
+        episode = session.query(Episode).filter_by(source_guid=episode_guid).first()
+        if not episode or not episode.transcript_json:
+            raise HTTPException(status_code=404, detail="Transcript not found.")
+        
+        return Response(content=episode.transcript_json, media_type="application/json")
+
+@app.get("/new_episodes")
+async def get_new_episodes(limit: int = 10, offset: int = 0):
+    with get_session() as session:
+        # For now, return episodes that have been processed (cut or transcribed)
+        # In a real scenario, this might involve a 'published' flag or a timestamp
+        episodes = session.query(Episode).filter(Episode.status.in_(['cut', 'transcribed']))\                                        .order_by(Episode.pub_date.desc())\                                        .offset(offset).limit(limit).all()
+        
+        # Return a simplified list of episode data for Atlas to consume
+        return [
+            {
+                "id": ep.id,
+                "source_guid": ep.source_guid,
+                "title": ep.title,
+                "show_name": ep.show_name,
+                "pub_date": ep.pub_date.isoformat(),
+                "cleaned_audio_url": f"{app.base_url}/audio/{ep.source_guid}.mp3" if ep.cleaned_file_path else None,
+                "original_audio_url": f"{app.base_url}/audio/{ep.source_guid}.mp3" if ep.original_file_path and not ep.cleaned_file_path else None,
+                "transcript_url": f"{app.base_url}/transcripts/{ep.source_guid}.json" if ep.transcript_json else None,
+                "status": ep.status,
+                "cleaned_duration": ep.cleaned_duration,
+                "cleaned_file_size": ep.cleaned_file_size,
+                "cleaned_ready_at": ep.cleaned_ready_at.isoformat() if ep.cleaned_ready_at else None,
+                "image_url": ep.image_url,
+                "show_image_url": ep.show_image_url,
+                "show_author": ep.show_author,
+            } for ep in episodes
+        ]
 
 @app.post("/mark")
 async def post_mark(mark_request: MarkRequest):
