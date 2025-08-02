@@ -10,6 +10,22 @@ def load_config(config_path: str) -> dict:
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
 
+def load_env_config() -> dict:
+    """
+    Loads configuration from environment variables.
+    """
+    env_config = {}
+    # Iterate through common expected env vars and load them
+    for key in ['PODCLEAN_BASE_URL', 'PODCLEAN_BIND', 'PODCLEAN_PORT', 'PODCLEAN_SECRET_TOKEN',
+                'MAX_PARALLEL_DOWNLOADS', 'MAX_PARALLEL_TRANSCRIBE',
+                'FAST_MODEL', 'FAST_VAD', 'FAST_BEAM', 'FAST_WORD_TS',
+                'FULL_MODEL', 'FULL_VAD', 'FULL_BEAM', 'FULL_WORD_TS',
+                'TARGET_CODEC', 'TARGET_BITRATE', 'PADDING_SECONDS', 'MIN_CONFIDENCE',
+                'MAX_FEED_ITEMS', 'PODCLEAN_MEDIA_BASE_PATH']:
+        if key in os.environ:
+            env_config[key] = os.environ[key]
+    return env_config
+
 def load_show_rules(show_slug: str = None) -> dict:
     """
     Loads default and optionally show-specific rules, merging them.
@@ -41,7 +57,11 @@ def load_app_config() -> dict:
     Loads the main application configuration.
     """
     config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'config', 'app.yaml')
-    return load_config(config_path)
+    app_config = load_config(config_path)
+    env_config = load_env_config()
+    # Environment variables override app.yaml settings
+    app_config.update(env_config)
+    return app_config
 
 if __name__ == "__main__":
     # Example Usage

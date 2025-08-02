@@ -104,10 +104,18 @@ async def post_mark(mark_request: MarkRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    # Ensure the data/originals directory exists for FileResponse
-    originals_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'originals')
-    if not os.path.exists(originals_dir):
-        os.makedirs(originals_dir)
+    # Ensure the media base directory exists
+    app_cfg = load_app_config()
+    media_base_path = app_cfg.get('PODCLEAN_MEDIA_BASE_PATH', os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data')))
+    if not os.path.exists(media_base_path):
+        os.makedirs(media_base_path)
     
+    # Ensure specific subdirectories exist
+    for sub_dir in ['originals', 'cleaned', 'transcripts', 'chapters']:
+        path = os.path.join(media_base_path, sub_dir)
+        if not os.path.exists(path):
+            os.makedirs(path)
+
     uvicorn.run(app, host="0.0.0.0", port=8080)
+
 

@@ -1,11 +1,16 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from src.store.models import Base
+from src.config.config_loader import load_app_config
+import os
 
-DATABASE_URL = "sqlite:///podclean/data/db.sqlite3"
+app_config = load_app_config()
+MEDIA_BASE_PATH = app_config.get('PODCLEAN_MEDIA_BASE_PATH', os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data')))
+DATABASE_URL = f"sqlite:///{os.path.join(MEDIA_BASE_PATH, 'db.sqlite3')}"
 
 engine = None
 SessionLocal = None
+
 
 def init_db(database_url: str = DATABASE_URL):
     global engine, SessionLocal
