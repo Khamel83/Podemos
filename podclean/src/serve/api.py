@@ -54,6 +54,15 @@ async def get_transcript(episode_guid: str):
         
         return Response(content=episode.transcript_json, media_type="application/json")
 
+@app.get("/chapters/{episode_guid}.json")
+async def get_chapters(episode_guid: str):
+    with get_session() as session:
+        episode = session.query(Episode).filter_by(source_guid=episode_guid).first()
+        if not episode or not episode.cleaned_chapters_json:
+            raise HTTPException(status_code=404, detail="Chapters not found.")
+        
+        return Response(content=episode.cleaned_chapters_json, media_type="application/json")
+
 @app.get("/new_episodes")
 async def get_new_episodes(limit: int = 10, offset: int = 0):
     with get_session() as session:
