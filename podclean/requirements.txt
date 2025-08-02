@@ -3,3 +3,4 @@ SQLAlchemy
 requests
 fastapi
 uvicorn
+faster-whisper
