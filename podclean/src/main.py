@@ -10,19 +10,23 @@ def main():
     parser = argparse.ArgumentParser(description="Podemos CLI for podcast processing.")
     parser.add_argument("--init-db", action="store_true", help="Initialize the database schema.")
     parser.add_argument("--poll-feed", type=str, help="Poll a given RSS feed URL.")
+    parser.add_argument("--poll-limit", type=int, help="Limit the number of episodes to poll.")
     parser.add_argument("--process-episode", type=int, help="Process a specific episode by ID.")
     parser.add_argument("--serve", action="store_true", help="Start the FastAPI server.")
 
     args = parser.parse_args()
 
+    # Always initialize the database
+    print("Initializing database...")
+    init_db()
+    print("Database initialized.")
+
     if args.init_db:
-        print("Initializing database...")
-        init_db()
-        print("Database initialized.")
+        print("Database already initialized by default.")
 
     if args.poll_feed:
         print(f"Polling feed: {args.poll_feed}")
-        poll_feed(args.poll_feed)
+        poll_feed(args.poll_feed, limit=args.poll_limit)
         print("Feed polling complete.")
 
     if args.process_episode:
@@ -33,10 +37,7 @@ def main():
 
     if args.serve:
         print("Starting FastAPI server...")
-        # Ensure the data/originals directory exists for FileResponse
-        originals_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..\', 'data\', 'originals')
-        if not os.path.exists(originals_dir):
-            os.makedirs(originals_dir)
+        # The API app handles directory creation based on PODCLEAN_MEDIA_BASE_PATH
         uvicorn.run(api_app, host="0.0.0.0", port=8080)
 
 if __name__ == "__main__":

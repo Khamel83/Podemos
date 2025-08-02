@@ -8,17 +8,26 @@ from src.dl.integrity import get_audio_duration
 from src.config.config_loader import load_app_config
 
 app_config = load_app_config()
+import time
+
 # Define the base directory for original audio files
 ORIGINALS_DIR = os.path.join(app_config.get('PODCLEAN_MEDIA_BASE_PATH'), 'originals')
 
-def poll_feed(feed_url: str):
+def poll_feed(feed_url: str, limit: int = None):
     feed = feedparser.parse(feed_url)
+    processed_count = 0
     for entry in feed.entries:
+        if limit is not None and processed_count >= limit:
+            print(f"Reached limit of {limit} episodes. Stopping polling.")
+            break
+        # Convert time.struct_time to datetime object
+        published_date = datetime.fromtimestamp(time.mktime(entry.published_parsed)) if entry.published_parsed else datetime.now()
+
         episode_data = {
             "source_guid": entry.guid,
             "title": entry.title,
             "show_name": feed.feed.title,
-            "pub_date": datetime.fromtimestamp(entry.published_parsed.mktime()),
+            "pub_date": published_date,
             "original_audio_url": entry.enclosures[0].href if entry.enclosures else None,
             "original_file_size": int(entry.enclosures[0].length) if entry.enclosures and hasattr(entry.enclosures[0], 'length') else None,
             "description": entry.summary,
@@ -34,11 +43,15 @@ def poll_feed(feed_url: str):
         with get_session() as session:
             episode = add_or_update_episode(session, episode_data)
             print(f"Processed episode: {episode.title} from {episode.show_name}")
+            processed_count += 1
 
             # Download audio if not already downloaded
             if episode.original_audio_url and not episode.original_file_path:
                 print(f"Attempting to download: {episode.original_audio_url}")
-                downloaded_path = download_file(episode.original_audio_url, ORIGINALS_DIR)
+                # Generate a unique filename using source_guid
+                file_extension = os.path.splitext(os.path.basename(episode.original_audio_url))[1] or ".mp3"
+                unique_filename = f"{episode.source_guid}{file_extension}"
+                downloaded_path = download_file(episode.original_audio_url, ORIGINALS_DIR, filename=unique_filename)
                 if downloaded_path:
                     episode.original_file_path = downloaded_path
                     # Get duration after download
