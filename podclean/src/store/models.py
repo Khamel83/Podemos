@@ -28,6 +28,7 @@ class Episode(Base):
     description = Column(Text)
     ad_segments_json = Column(Text) # JSON string of detected ad segments
     transcript_json = Column(Text) # JSON string of the full transcript
+    cleaned_chapters_json = Column(Text) # JSON string of adjusted chapters after cutting
 
     def __repr__(self):
         return f"<Episode(title='{self.title}', show='{self.show_name}', status='{self.status}')>"

@@ -8,7 +8,7 @@ def build_meta_feed(base_url: str, max_items: int = 500):
     with get_session() as session:
         episodes = session.query(Episode).filter(Episode.original_file_path.isnot(None)).order_by(Episode.pub_date.desc()).limit(max_items).all()
 
-    rss = Element('rss', {'version': '2.0', 'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd'})
+    rss = Element('rss', {'version': '2.0', 'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd', 'xmlns:podcast': 'http://podcastindex.org/namespace/1.0'})
     channel = SubElement(rss, 'channel')
     SubElement(channel, 'title').text = "Podemos - Clean Podcasts (Originals)"
     SubElement(channel, 'link').text = base_url
@@ -39,6 +39,10 @@ def build_meta_feed(base_url: str, max_items: int = 500):
         
         if ep.description:
             SubElement(item, 'description').text = ep.description
+
+        # Optional: podcast:chapters with non-ad chapters
+        if ep.cleaned_chapters_json:
+            chapters_element = SubElement(item, '{http://podcastindex.org/namespace/1.0}chapters', {'url': f"{base_url}/chapters/{ep.source_guid}.json", 'type': 'application/json'})
 
     return tostring(rss, encoding='utf-8', xml_declaration=True).decode()
 
