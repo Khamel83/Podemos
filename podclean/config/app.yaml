@@ -17,4 +17,6 @@ detector:
 encoding:
   codec: mp3
   bitrate: v4
-  normalize_loudness: false # New option for loudness normalization
+  normalize_loudness: false
+
+MIN_CONFIDENCE: 0.70 # Default confidence threshold for ad detection # New option for loudness normalization
