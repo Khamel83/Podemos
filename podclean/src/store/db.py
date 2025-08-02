@@ -21,3 +21,18 @@ def get_session():
         yield session
     finally:
         session.close()
+
+def add_or_update_episode(session, episode_data):
+    from src.store.models import Episode # Import here to avoid circular dependency
+    episode = session.query(Episode).filter_by(source_guid=episode_data['source_guid']).first()
+    if episode:
+        # Update existing episode
+        for key, value in episode_data.items():
+            setattr(episode, key, value)
+    else:
+        # Add new episode
+        episode = Episode(**episode_data)
+        session.add(episode)
+    session.commit()
+    session.refresh(episode)
+    return episode
