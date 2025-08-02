@@ -8,9 +8,11 @@ from src.cut.plan import build_keep_segments
 from src.cut.ffmpeg_exec import cut_with_ffmpeg
 from src.cut.tags_chapters import adjust_chapters_after_cut, filter_ad_chapters
 from src.config.config_loader import load_app_config
+from src.transcribe.full_whisper import full_transcribe
 
 # Define the base directory for cleaned audio files
 CLEANED_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'cleaned')
+TRANSCRIPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'transcripts')
 
 def process_episode(episode_id: int):
     with get_session() as session:
@@ -29,7 +31,7 @@ def process_episode(episode_id: int):
         print(f"Processing episode: {episode.title}")
         app_cfg = load_app_config()
 
-        # 1. Ad Detection
+        # 1. Ad Detection (Fast Pass)
         # Pass episode.show_name as show_slug for config loading
         ad_cuts = detect_ads_fast(episode.original_file_path, episode, episode.show_name)
         episode.ad_segments_json = json.dumps(ad_cuts) # Store detected ad segments
@@ -38,13 +40,10 @@ def process_episode(episode_id: int):
         session.refresh(episode)
 
         # 2. Build Keep Segments
-        # For now, assuming original_duration is available. Will need to get it from audio file if not.
-        # This is a placeholder for getting duration if not already present
         if not episode.original_duration:
-            # TODO: Implement audio duration extraction (e.g., using ffprobe)
             print(f"Warning: original_duration not set for episode {episode.id}. Cannot accurately plan cuts.")
+            # TODO: Implement audio duration extraction (e.g., using ffprobe) if not already done by rss_poll
             # For now, let's assume a dummy duration for testing purposes if not set
-            # In a real scenario, this would be a critical error or a step to extract duration
             episode.original_duration = 3600 # Dummy 1 hour for testing
             session.add(episode)
             session.commit()
@@ -89,6 +88,41 @@ def process_episode(episode_id: int):
             session.commit()
             session.refresh(episode)
             print(f"Chapters adjusted for episode ID {episode_id}.")
+
+        # 5. Full Transcription (Milestone E)
+        if app_cfg.get('FULL_PASS_ENABLED', False) and episode.status == 'cut': # Only run if enabled and cut was successful
+            print(f"Initiating full transcription for episode: {episode.title}")
+            full_model_size = app_cfg.get('FULL_MODEL', "medium")
+            full_vad = app_cfg.get('FULL_VAD', True)
+            full_beam = app_cfg.get('FULL_BEAM', 2)
+            full_word_ts = app_cfg.get('FULL_WORD_TS', True)
+
+            transcription_results = full_transcribe(
+                episode.cleaned_file_path, 
+                model_size=full_model_size, 
+                vad=full_vad, 
+                beam_size=full_beam, 
+                word_timestamps=full_word_ts
+            )
+            
+            if transcription_results:
+                episode.transcript_json = json.dumps(transcription_results)
+                episode.status = 'transcribed'
+                # Save transcript to file as well
+                if not os.path.exists(TRANSCRIPTS_DIR):
+                    os.makedirs(TRANSCRIPTS_DIR)
+                transcript_filename = f"{os.path.splitext(os.path.basename(episode.cleaned_file_path))[0]}.json"
+                transcript_filepath = os.path.join(TRANSCRIPTS_DIR, transcript_filename)
+                with open(transcript_filepath, 'w') as f:
+                    json.dump(transcription_results, f, indent=4)
+                print(f"Full transcript saved to: {transcript_filepath}")
+            else:
+                episode.status = 'transcription_failed'
+                print(f"Full transcription failed for episode ID {episode_id}.")
+            
+            session.add(episode)
+            session.commit()
+            session.refresh(episode)
 
         print(f"Finished processing episode: {episode.title} with status: {episode.status}")
 
