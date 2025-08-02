@@ -53,7 +53,7 @@ def poll_feed(feed_url: str, limit: int = None):
             if episode.original_audio_url and not episode.original_file_path:
                 logger.info(f"Attempting to download: {episode.original_audio_url}")
                 # Generate a unique filename using show name, episode title, and download date
-                file_extension = os.path.splitext(os.path.basename(episode.original_audio_url))[1] or ".mp3"
+                file_extension = os.path.splitext(os.path.basename(episode.original_audio_url).split('?')[0])[1] or ".mp3"
                 # Sanitize title and show name for filename
                 sanitized_title = "".join(c for c in episode.title if c.isalnum() or c in (' ', '-')).strip().replace(' ', '_')
                 sanitized_show_name = "".join(c for c in episode.show_name if c.isalnum() or c in (' ', '-')).strip().replace(' ', '_')
