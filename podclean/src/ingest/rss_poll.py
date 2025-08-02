@@ -6,10 +6,12 @@ from src.store.db import get_session, add_or_update_episode
 from src.dl.fetcher import download_file
 from src.dl.integrity import get_audio_duration
 from src.config.config_loader import load_app_config
+import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 app_config = load_app_config()
-import time
-
 # Define the base directory for original audio files
 ORIGINALS_DIR = os.path.join(app_config.get('PODCLEAN_MEDIA_BASE_PATH'), 'originals')
 
@@ -18,7 +20,7 @@ def poll_feed(feed_url: str, limit: int = None):
     processed_count = 0
     for entry in feed.entries:
         if limit is not None and processed_count >= limit:
-            print(f"Reached limit of {limit} episodes. Stopping polling.")
+            logger.info(f"Reached limit of {limit} episodes. Stopping polling.")
             break
         # Convert time.struct_time to datetime object
         published_date = datetime.fromtimestamp(time.mktime(entry.published_parsed)) if entry.published_parsed else datetime.now()
@@ -38,17 +40,17 @@ def poll_feed(feed_url: str, limit: int = None):
         }
         # Basic validation for required fields
         if not all([episode_data['source_guid'], episode_data['title'], episode_data['original_audio_url']]):
-            print(f"Skipping entry due to missing required data: {entry.title}")
+            logger.warning(f"Skipping entry due to missing required data: {entry.title}")
             continue
 
         with get_session() as session:
             episode = add_or_update_episode(session, episode_data)
-            print(f"Processed episode: {episode.title} from {episode.show_name}")
+            logger.info(f"Processed episode: {episode.title} from {episode.show_name}")
             processed_count += 1
 
             # Download audio if not already downloaded
             if episode.original_audio_url and not episode.original_file_path:
-                print(f"Attempting to download: {episode.original_audio_url}")
+                logger.info(f"Attempting to download: {episode.original_audio_url}")
                 # Generate a unique filename using source_guid
                 file_extension = os.path.splitext(os.path.basename(episode.original_audio_url))[1] or ".mp3"
                 unique_filename = f"{episode.source_guid}{file_extension}"
@@ -63,20 +65,20 @@ def poll_feed(feed_url: str, limit: int = None):
                     session.add(episode)
                     session.commit()
                     session.refresh(episode)
-                    print(f"Downloaded and updated path for {episode.title}")
+                    logger.info(f"Downloaded and updated path for {episode.title}")
                 else:
                     episode.status = 'download_failed'
                     session.add(episode)
                     session.commit()
                     session.refresh(episode)
-                    print(f"Failed to download {episode.title}")
+                    logger.error(f"Failed to download {episode.title}")
 
 if __name__ == "__main__":
     # Example usage (will be replaced by main runner)
     # This requires 'feedparser' and 'requests' to be installed: pip install feedparser requests
     # And a test RSS feed URL
-    print("This script is intended to be run as part of the main application.")
-    print("Please ensure 'feedparser' and 'requests' are installed if you intend to test it directly.")
+    logger.info("This script is intended to be run as part of the main application.")
+    logger.info("Please ensure 'feedparser' and 'requests' are installed if you intend to test it directly.")
     # Example: poll_feed("http://www.example.com/podcast.rss")
 
 

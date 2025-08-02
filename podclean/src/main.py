@@ -1,10 +1,15 @@
 import argparse
 import uvicorn
 import os
+import logging
 
 from src.store.db import init_db
 from src.ingest.rss_poll import poll_feed
 from src.serve.api import app as api_app # Import the FastAPI app
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def main():
     parser = argparse.ArgumentParser(description="Podemos CLI for podcast processing.")
@@ -17,26 +22,26 @@ def main():
     args = parser.parse_args()
 
     # Always initialize the database
-    print("Initializing database...")
+    logger.info("Initializing database...")
     init_db()
-    print("Database initialized.")
+    logger.info("Database initialized.")
 
     if args.init_db:
-        print("Database already initialized by default.")
+        logger.info("Database already initialized by default.")
 
     if args.poll_feed:
-        print(f"Polling feed: {args.poll_feed}")
+        logger.info(f"Polling feed: {args.poll_feed}")
         poll_feed(args.poll_feed, limit=args.poll_limit)
-        print("Feed polling complete.")
+        logger.info("Feed polling complete.")
 
     if args.process_episode:
-        print(f"Processing episode ID: {args.process_episode}")
+        logger.info(f"Processing episode ID: {args.process_episode}")
         from src.processor.episode_processor import process_episode
         process_episode(args.process_episode)
-        print("Episode processing complete.")
+        logger.info("Episode processing complete.")
 
     if args.serve:
-        print("Starting FastAPI server...")
+        logger.info("Starting FastAPI server...")
         # The API app handles directory creation based on PODCLEAN_MEDIA_BASE_PATH
         uvicorn.run(api_app, host="0.0.0.0", port=8080)
 
