@@ -7,8 +7,13 @@ from src.store.db import init_db, get_session
 from src.store.models import Episode
 from src.processor.episode_processor import process_episode # To reprocess episode after mark
 from src.config.config_loader import load_app_config # Import config loader
+from fastapi.staticfiles import StaticFiles # Import StaticFiles
+from sqlalchemy import func # Import func for counting
 
 app = FastAPI()
+
+# Mount static files directory
+app.mount("/static", StaticFiles(directory="podclean/src/serve/static"), name="static")
 
 # Pydantic model for the /mark endpoint payload
 class MarkRequest(BaseModel):
@@ -68,7 +73,9 @@ async def get_new_episodes(limit: int = 10, offset: int = 0):
     with get_session() as session:
         # For now, return episodes that have been processed (cut or transcribed)
         # In a real scenario, this might involve a 'published' flag or a timestamp
-        episodes = session.query(Episode).filter(Episode.status.in_(['cut', 'transcribed']))\                                        .order_by(Episode.pub_date.desc())\                                        .offset(offset).limit(limit).all()
+        episodes = session.query(Episode).filter(Episode.status.in_(['cut', 'transcribed']))\
+                                        .order_by(Episode.pub_date.desc())
+                                        .offset(offset).limit(limit).all()
         
         # Return a simplified list of episode data for Atlas to consume
         return [
@@ -90,6 +97,16 @@ async def get_new_episodes(limit: int = 10, offset: int = 0):
                 "show_author": ep.show_author,
             } for ep in episodes
         ]
+
+@app.get("/status")
+async def get_status():
+    with get_session() as session:
+        episode_counts = session.query(Episode.status, func.count(Episode.id)).group_by(Episode.status).all()
+        return {"episode_counts": dict(episode_counts)}
+
+@app.get("/")
+async def read_root():
+    return FileResponse("podclean/src/serve/static/index.html")
 
 @app.post("/mark")
 async def post_mark(mark_request: MarkRequest):

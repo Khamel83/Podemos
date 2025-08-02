@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Podemos Dashboard</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; }
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
+        .status-card { background-color: #e9ecef; padding: 15px; border-radius: 5px; text-align: center; }
+        .status-card h2 { margin: 0; font-size: 1.2em; color: #555; }
+        .status-card p { font-size: 2em; font-weight: bold; color: #007bff; margin-top: 10px; }
+        .episode-list { margin-top: 30px; }
+        .episode-list h2 { color: #0056b3; }
+        .episode-item { background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+        .episode-item strong { color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Podemos Dashboard</h1>
+
+        <div class="status-grid" id="status-grid">
+            <!-- Status cards will be loaded here by JavaScript -->
+        </div>
+
+        <div class="episode-list">
+            <h2>Recent Episodes</h2>
+            <div id="recent-episodes">
+                <!-- Recent episodes will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchStatus() {
+            const response = await fetch('/status');
+            const data = await response.json();
+            const statusGrid = document.getElementById('status-grid');
+            statusGrid.innerHTML = '';
+            for (const status in data.episode_counts) {
+                const card = document.createElement('div');
+                card.className = 'status-card';
+                card.innerHTML = `<h2>${status.replace(/_/g, ' ').toUpperCase()}</h2><p>${data.episode_counts[status]}</p>`;
+                statusGrid.appendChild(card);
+            }
+        }
+
+        async function fetchRecentEpisodes() {
+            const response = await fetch('/new_episodes?limit=10'); // Using the existing new_episodes endpoint
+            const episodes = await response.json();
+            const recentEpisodesDiv = document.getElementById('recent-episodes');
+            recentEpisodesDiv.innerHTML = '';
+            episodes.forEach(ep => {
+                const item = document.createElement('div');
+                item.className = 'episode-item';
+                item.innerHTML = `
+                    <strong>${ep.title}</strong><br>
+                    Show: ${ep.show_name}<br>
+                    Status: ${ep.status}<br>
+                    Published: ${new Date(ep.pub_date).toLocaleDateString()}
+                `;
+                recentEpisodesDiv.appendChild(item);
+            });
+        }
+
+        fetchStatus();
+        fetchRecentEpisodes();
+        setInterval(fetchStatus, 30000); // Refresh status every 30 seconds
+        setInterval(fetchRecentEpisodes, 60000); // Refresh episodes every minute
+    </script>
+</body>
+</html>
