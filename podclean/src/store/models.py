@@ -29,6 +29,8 @@ class Episode(Base):
     ad_segments_json = Column(Text) # JSON string of detected ad segments
     transcript_json = Column(Text) # JSON string of the full transcript
     cleaned_chapters_json = Column(Text) # JSON string of adjusted chapters after cutting
+    chapters_json = Column(Text) # Raw chapters JSON from RSS feed
+    md_transcript_file_path = Column(String) # Path to the Markdown transcript file
 
     def __repr__(self):
         return f"<Episode(title='{self.title}', show='{self.show_name}', status='{self.status}')>"

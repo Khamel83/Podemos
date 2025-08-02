@@ -69,6 +69,17 @@ async def get_chapters(episode_guid: str):
         
         return Response(content=episode.cleaned_chapters_json, media_type="application/json")
 
+@app.get("/transcripts/{episode_guid}.md")
+async def get_md_transcript(episode_guid: str):
+    with get_session() as session:
+        episode = session.query(Episode).filter_by(source_guid=episode_guid).first()
+        if not episode or not episode.md_transcript_file_path or not os.path.exists(episode.md_transcript_file_path):
+            raise HTTPException(status_code=404, detail="Markdown transcript not found.")
+        
+        with open(episode.md_transcript_file_path, 'r') as f:
+            content = f.read()
+        return Response(content=content, media_type="text/markdown")
+
 @app.get("/new_episodes")
 async def get_new_episodes(limit: int = 10, offset: int = 0):
     with get_session() as session:
