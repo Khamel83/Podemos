@@ -61,9 +61,9 @@ def process_episode(episode_id: int):
         cleaned_filename = f"{os.path.splitext(os.path.basename(episode.original_file_path))[0]}_cleaned.mp3"
         cleaned_output_path = os.path.join(CLEANED_DIR, cleaned_filename)
 
-        codec = app_cfg.get('encoding', {}).get('codec', 'mp3')
-        bitrate = app_cfg.get('encoding', {}).get('bitrate', 'v4')
-        normalize_loudness = app_cfg.get('encoding', {}).get('normalize_loudness', False)
+        codec = app_cfg.encoding.codec
+        bitrate = app_cfg.encoding.bitrate
+        normalize_loudness = app_cfg.encoding.normalize_loudness
 
         success = cut_with_ffmpeg(episode.original_file_path, keep_segments, cleaned_output_path, codec=codec, bitrate=bitrate, normalize_loudness=normalize_loudness)
 
@@ -93,12 +93,12 @@ def process_episode(episode_id: int):
             print(f"Chapters adjusted for episode ID {episode_id}.")
 
         # 5. Full Transcription (Milestone E)
-        if app_cfg.get('FULL_PASS_ENABLED', False) and episode.status == 'cut': # Only run if enabled and cut was successful
+        if app_cfg.FULL_PASS_ENABLED and episode.status == 'cut': # Only run if enabled and cut was successful
             print(f"Initiating full transcription for episode: {episode.title}")
-            full_model_size = app_cfg.get('FULL_MODEL', "medium")
-            full_vad = app_cfg.get('FULL_VAD', True)
-            full_beam = app_cfg.get('FULL_BEAM', 2)
-            full_word_ts = app_cfg.get('FULL_WORD_TS', True)
+            full_model_size = app_cfg.FULL_MODEL
+            full_vad = app_cfg.FULL_VAD
+            full_beam = app_cfg.FULL_BEAM
+            full_word_ts = app_cfg.FULL_WORD_TS
 
             transcription_results = full_transcribe(
                 episode.cleaned_file_path, 
