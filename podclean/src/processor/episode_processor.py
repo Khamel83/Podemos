@@ -8,12 +8,13 @@ from src.cut.plan import build_keep_segments
 from src.cut.ffmpeg_exec import cut_with_ffmpeg
 from src.cut.tags_chapters import adjust_chapters_after_cut, filter_ad_chapters
 from src.config.config_loader import load_app_config
+from src.config.config import AppConfig
 from src.transcribe.full_whisper import full_transcribe
 
-app_cfg = load_app_config()
+app_cfg: AppConfig = load_app_config()
 # Define the base directory for cleaned audio files
-CLEANED_DIR = os.path.join(app_cfg.get('PODCLEAN_MEDIA_BASE_PATH'), 'cleaned')
-TRANSCRIPTS_DIR = os.path.join(app_cfg.get('PODCLEAN_MEDIA_BASE_PATH'), 'transcripts')
+CLEANED_DIR = os.path.join(app_cfg.PODCLEAN_MEDIA_BASE_PATH, 'cleaned')
+TRANSCRIPTS_DIR = os.path.join(app_cfg.PODCLEAN_MEDIA_BASE_PATH, 'transcripts')
 
 def process_episode(episode_id: int):
     with get_session() as session:

@@ -2,15 +2,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from src.store.models import Base
 from src.config.config_loader import load_app_config
+from src.config.config import AppConfig
 import os
+from contextlib import contextmanager
 
-app_config = load_app_config()
-MEDIA_BASE_PATH = app_config.get('PODCLEAN_MEDIA_BASE_PATH', os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data')))
+app_config: AppConfig = load_app_config()
+MEDIA_BASE_PATH = app_config.PODCLEAN_MEDIA_BASE_PATH
 DATABASE_URL = f"sqlite:///{os.path.join(MEDIA_BASE_PATH, 'db.sqlite3')}"
 
 engine = None
 SessionLocal = None
-
 
 def init_db(database_url: str = DATABASE_URL):
     global engine, SessionLocal
@@ -18,6 +19,7 @@ def init_db(database_url: str = DATABASE_URL):
     Base.metadata.create_all(engine)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+@contextmanager
 def get_session():
     if SessionLocal is None:
         raise Exception("Database not initialized. Call init_db() first.")
@@ -26,6 +28,7 @@ def get_session():
         yield session
     finally:
         session.close()
+
 
 def add_or_update_episode(session, episode_data):
     from src.store.models import Episode # Import here to avoid circular dependency

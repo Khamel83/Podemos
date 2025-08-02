@@ -1,41 +1,14 @@
 from src.detect.chapters import load_chapters_from_json, matches_ad_chapter
 from src.transcribe.fast_whisper import fast_transcribe
 from src.detect.fast_text_rules import contains_phrases, has_url_or_price
+from src.config.config_loader import load_app_config, load_show_rules
+from src.config.config import AppConfig, ShowRules
 
-def in_time_priors(timestamp: float, episode_duration: float, priors: dict) -> bool:
-    """
-    Checks if a timestamp falls within defined time priors (pre-roll, mid-roll, post-roll).
-    """
-    if not priors or not episode_duration:
-        return False
-
-    # Pre-roll
-    pre_roll_max_s = priors.get('pre_roll_max_s', 0)
-    if timestamp <= pre_roll_max_s:
-        return True
-
-    # Post-roll
-    post_roll_last_s = priors.get('post_roll_last_s', 0)
-    if timestamp >= (episode_duration - post_roll_last_s):
-        return True
-
-    # Mid-roll
-    mid_roll_pct = priors.get('mid_roll_pct')
-    if mid_roll_pct and len(mid_roll_pct) == 2:
-        mid_roll_start = episode_duration * mid_roll_pct[0]
-        mid_roll_end = episode_duration * mid_roll_pct[1]
-        if mid_roll_start <= timestamp <= mid_roll_end:
-            return True
-
-    return False
-
-    return False
-
-def confident_enough(cuts: list, cfg: dict) -> bool:
+def confident_enough(cuts: list, cfg: AppConfig) -> bool:
     """
     Checks if the detected cuts are confident enough based on MIN_CONFIDENCE.
     """
-    min_confidence = cfg.get('MIN_CONFIDENCE', 0.70) # Default from env.template
+    min_confidence = cfg.MIN_CONFIDENCE # Access directly from Pydantic model
     if not cuts:
         return False
     return all(cut.get('confidence', 0) >= min_confidence for cut in cuts)
@@ -67,6 +40,33 @@ def filter_by_policy(cuts: list) -> list:
     For now, a placeholder.
     """
     return cuts
+
+def in_time_priors(timestamp: float, episode_duration: float, priors: dict) -> bool:
+    """
+    Checks if a timestamp falls within defined time priors (pre-roll, mid-roll, post-roll).
+    """
+    if not priors or not episode_duration:
+        return False
+
+    # Pre-roll
+    pre_roll_max_s = priors.get('pre_roll_max_s', 0)
+    if timestamp <= pre_roll_max_s:
+        return True
+
+    # Post-roll
+    post_roll_last_s = priors.get('post_roll_last_s', 0)
+    if timestamp >= (episode_duration - post_roll_last_s):
+        return True
+
+    # Mid-roll
+    mid_roll_pct = priors.get('mid_roll_pct')
+    if mid_roll_pct and len(mid_roll_pct) == 2:
+        mid_roll_start = episode_duration * mid_roll_pct[0]
+        mid_roll_end = episode_duration * mid_roll_pct[1]
+        if mid_roll_start <= timestamp <= mid_roll_end:
+            return True
+
+    return False
 
 def slide(segments, size_s, step_s):
     """
@@ -129,53 +129,11 @@ def slide(segments, size_s, step_s):
         if current_start >= all_words[-1]['end']:
             break
 
-def detect_ads_fast(audio_path, episode_meta, show_profile, cfg):
-    cuts = []
-
-    # 1) Chapters pass (Podcasting 2.0)
-    if hasattr(episode_meta, 'chapters_json') and episode_meta.chapters_json:
-        chap = load_chapters_from_json(episode_meta.chapters_json)
-        for c in chap:
-            if matches_ad_chapter(c['title']):
-                cuts.append({'start': c['start'], 'end': c['end'], 'type': "chapter", 'confidence': 0.99})
-
-    if confident_enough(cuts, cfg):
-        return merge_and_pad(cuts, cfg.get('detector', {}).get('padding_seconds', 8)) # Default padding from config
-
-    # 2) Transcript rules (small model, VAD, word timestamps)
-    # Assuming cfg.FAST_MODEL, cfg.FAST_VAD from config
-    # Need to pass these from main config or env
-    # For now, using hardcoded values or defaults
-    tr = fast_transcribe(audio_path, model_size="small", vad=True, word_timestamps=True)
-
-    # Assuming show_profile has phrases, url_patterns, price_patterns
-    # And cfg.detector has require_signals
-    # Need to load default.rules.yaml and merge with show_profile
-    default_phrases = ["brought to you by", "presented by", "sponsor", "promo code", "use code", "visit", "slash", "free trial", "risk-free", "terms apply"]
-    default_url_patterns = ["\\bhttps?://[\\w\\.-]+\\.[a-z]{2,}\\S*", "\\b[A-Za-z0-9.-]+\\.(com|io|ai|net)\\b"]
-    default_price_patterns = ["\\b\$\\d+", "\\b\d+%\\s*off\\b"]
-
-    # Combine show-specific rules with default rules
-    all_phrases = list(set(show_profile.get('phrases', []) + default_phrases))
-    all_url_patterns = list(set(show_profile.get('url_patterns', []) + default_url_patterns))
-    all_price_patterns = list(set(show_profile.get('price_patterns', []) + default_price_patterns))
-
-    require_signals = cfg.detector.get('require_signals', 2) # Default to 2 if not in config
-
-    for win in slide(tr, size_s=20, step_s=5):
-        score = 0
-        if contains_phrases(win['text'], all_phrases): score += 1
-        if has_url_or_price(win['text'], all_url_patterns, all_price_patterns): score += 1
-        from src.detect.chapters import load_chapters_from_json, matches_ad_chapter
-from src.transcribe.fast_whisper import fast_transcribe
-from src.detect.fast_text_rules import contains_phrases, has_url_or_price
-from src.config.config_loader import load_app_config, load_show_rules
-
 def detect_ads_fast(audio_path, episode_meta, show_slug: str = None):
     # Load global app config
-    app_cfg = load_app_config()
+    app_cfg: AppConfig = load_app_config()
     # Load show-specific rules, merging with defaults
-    show_rules = load_show_rules(show_slug)
+    show_rules: ShowRules = load_show_rules(show_slug)
 
     cuts = []
 
@@ -187,27 +145,27 @@ def detect_ads_fast(audio_path, episode_meta, show_slug: str = None):
                 cuts.append({'start': c['start'], 'end': c['end'], 'type': "chapter", 'confidence': 0.99})
 
     if confident_enough(cuts, app_cfg):
-        return merge_and_pad(cuts, app_cfg.get('detector', {}).get('padding_seconds', 8)) # Default padding from config
+        return merge_and_pad(cuts, app_cfg.detector.padding_seconds) # Access directly from Pydantic model
 
     # 2) Transcript rules (small model, VAD, word timestamps)
     # Use model and VAD settings from app_cfg or env.template
-    fast_model = app_cfg.get('FAST_MODEL', "small") # Assuming these are in app_cfg or env
-    fast_vad = app_cfg.get('FAST_VAD', True)
+    fast_model = app_cfg.FAST_MODEL # Access directly from Pydantic model
+    fast_vad = app_cfg.FAST_VAD # Access directly from Pydantic model
 
     tr = fast_transcribe(audio_path, model_size=fast_model, vad=fast_vad, word_timestamps=True)
 
     # Combine show-specific rules with default rules
-    all_phrases = show_rules.get('phrases', [])
-    all_url_patterns = show_rules.get('url_patterns', [])
-    all_price_patterns = show_rules.get('price_patterns', [])
+    all_phrases = show_rules.phrases # Access directly from Pydantic model
+    all_url_patterns = show_rules.url_patterns # Access directly from Pydantic model
+    all_price_patterns = show_rules.price_patterns # Access directly from Pydantic model
 
-    require_signals = app_cfg.get('detector', {}).get('require_signals', 2) # Default to 2 if not in config
+    require_signals = app_cfg.detector.require_signals # Access directly from Pydantic model
 
     for win in slide(tr, size_s=20, step_s=5):
         score = 0
         if contains_phrases(win['text'], all_phrases): score += 1
         if has_url_or_price(win['text'], all_url_patterns, all_price_patterns): score += 1
-        if in_time_priors(win['start'], episode_meta.original_duration, app_cfg.get('detector', {}).get('priors', {})): score += 1
+        if in_time_priors(win['start'], episode_meta.original_duration, app_cfg.detector.priors): score += 1
         
         if score >= require_signals:
             cuts.append({'start': win['start'], 'end': win['end'], 'type': "text", 'confidence': 0.7})
@@ -218,16 +176,4 @@ def detect_ads_fast(audio_path, episode_meta, show_slug: str = None):
     #         cuts.append(range(m.start, m.end, "audio", conf=0.6))
 
     # TODO: Implement merge_and_pad and filter_by_policy
-    return merge_and_pad(filter_by_policy(cuts), app_cfg.get('detector', {}).get('padding_seconds', 8))
-        
-        if score >= require_signals:
-            cuts.append({'start': win['start'], 'end': win['end'], 'type': "text", 'confidence': 0.7})
-
-    # 3) (optional v2) audio cues / jingle match if still low recall
-    # if cfg.detector.use_audio_cues and need_more_evidence(cuts):
-    #     for m in match_jingles(audio_path, show_profile.jingles):
-    #         cuts.append(range(m.start, m.end, "audio", conf=0.6))
-
-    # TODO: Implement merge_and_pad and filter_by_policy
-    return cuts
-
+    return merge_and_pad(filter_by_policy(cuts), app_cfg.detector.padding_seconds)

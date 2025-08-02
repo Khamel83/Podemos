@@ -7,6 +7,7 @@ from src.store.db import init_db, get_session
 from src.store.models import Episode
 from src.processor.episode_processor import process_episode # To reprocess episode after mark
 from src.config.config_loader import load_app_config # Import config loader
+from src.config.config import AppConfig # Import AppConfig
 from fastapi.staticfiles import StaticFiles # Import StaticFiles
 from sqlalchemy import func # Import func for counting
 
@@ -26,8 +27,8 @@ class MarkRequest(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     init_db()
-    app_cfg = load_app_config()
-    app.base_url = app_cfg.get('PODCLEAN_BASE_URL', "http://localhost:8080") # Load base URL from config
+    app_cfg: AppConfig = load_app_config()
+    app.base_url = app_cfg.PODCLEAN_BASE_URL # Load base URL from config
 
 @app.get("/feed.xml")
 async def get_feed():
@@ -132,7 +133,7 @@ if __name__ == "__main__":
     import uvicorn
     # Ensure the media base directory exists
     app_cfg = load_app_config()
-    media_base_path = app_cfg.get('PODCLEAN_MEDIA_BASE_PATH', os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data')))
+    media_base_path = app_cfg.PODCLEAN_MEDIA_BASE_URL
     if not os.path.exists(media_base_path):
         os.makedirs(media_base_path)
     
@@ -143,5 +144,6 @@ if __name__ == "__main__":
             os.makedirs(path)
 
     uvicorn.run(app, host="0.0.0.0", port=8080)
+
 
 

@@ -6,14 +6,15 @@ from src.store.db import get_session, add_or_update_episode
 from src.dl.fetcher import download_file
 from src.dl.integrity import get_audio_duration
 from src.config.config_loader import load_app_config
+from src.config.config import AppConfig
 import time
 import logging
 
 logger = logging.getLogger(__name__)
 
-app_config = load_app_config()
+app_config: AppConfig = load_app_config()
 # Define the base directory for original audio files
-ORIGINALS_DIR = os.path.join(app_config.get('PODCLEAN_MEDIA_BASE_PATH'), 'originals')
+ORIGINALS_DIR = os.path.join(app_config.PODCLEAN_MEDIA_BASE_PATH, 'originals')
 
 def poll_feed(feed_url: str, limit: int = None):
     feed = feedparser.parse(feed_url)
