@@ -49,6 +49,9 @@ class AppConfig(BaseModel):
     # Detector
     detector: DetectorConfig = Field(default_factory=DetectorConfig)
 
+    # Ad detection confidence
+    MIN_CONFIDENCE: float = 0.70
+
     # Feature flags
     FULL_PASS_ENABLED: bool = False # New flag to control full pass transcription
 
