@@ -2,6 +2,33 @@ from src.detect.chapters import load_chapters_from_json, matches_ad_chapter
 from src.transcribe.fast_whisper import fast_transcribe
 from src.detect.fast_text_rules import contains_phrases, has_url_or_price
 
+def in_time_priors(timestamp: float, episode_duration: float, priors: dict) -> bool:
+    """
+    Checks if a timestamp falls within defined time priors (pre-roll, mid-roll, post-roll).
+    """
+    if not priors or not episode_duration:
+        return False
+
+    # Pre-roll
+    pre_roll_max_s = priors.get('pre_roll_max_s', 0)
+    if timestamp <= pre_roll_max_s:
+        return True
+
+    # Post-roll
+    post_roll_last_s = priors.get('post_roll_last_s', 0)
+    if timestamp >= (episode_duration - post_roll_last_s):
+        return True
+
+    # Mid-roll
+    mid_roll_pct = priors.get('mid_roll_pct')
+    if mid_roll_pct and len(mid_roll_pct) == 2:
+        mid_roll_start = episode_duration * mid_roll_pct[0]
+        mid_roll_end = episode_duration * mid_roll_pct[1]
+        if mid_roll_start <= timestamp <= mid_roll_end:
+            return True
+
+    return False
+
 def slide(segments, size_s, step_s):
     """
     Slides a window over transcription segments.
@@ -101,8 +128,7 @@ def detect_ads_fast(audio_path, episode_meta, show_profile, cfg):
         score = 0
         if contains_phrases(win['text'], all_phrases): score += 1
         if has_url_or_price(win['text'], all_url_patterns, all_price_patterns): score += 1
-        # TODO: Implement in_time_priors
-        # if in_time_priors(win.ts, episode_meta.duration, cfg.detector.priors): score += 1
+        if in_time_priors(win['start'], episode_meta.original_duration, cfg.detector.get('priors', {})): score += 1
         
         if score >= require_signals:
             cuts.append({'start': win['start'], 'end': win['end'], 'type': "text", 'confidence': 0.7})
