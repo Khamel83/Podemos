@@ -34,6 +34,7 @@ def poll_feed(feed_url: str, limit: int = None):
             "image_url": entry.image.href if hasattr(entry, 'image') and hasattr(entry.image, 'href') else None,
             "show_image_url": feed.feed.image.href if hasattr(feed.feed, 'image') and hasattr(feed.feed.image, 'href') else None,
             "show_author": feed.feed.author if hasattr(feed.feed, 'author') else None,
+            "chapters_json": json.dumps(entry.chapters) if hasattr(entry, 'chapters') else None, # Assuming chapters are directly available
         }
         # Basic validation for required fields
         if not all([episode_data['source_guid'], episode_data['title'], episode_data['original_audio_url']]):

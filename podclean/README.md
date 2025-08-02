@@ -1,5 +1,12 @@
 podclean/
   README.md
+
+# Prerequisites
+
+*   **FFmpeg:** This project relies on `ffmpeg` for audio processing (cutting, normalization, duration extraction). Please ensure `ffmpeg` is installed and accessible in your system's PATH.
+    *   **macOS (Homebrew):** `brew install ffmpeg`
+    *   **Other OS:** Refer to the [official FFmpeg documentation](https://ffmpeg.org/download.html) for installation instructions.
+
   checklists.md
   env.template
   config/
