@@ -29,6 +29,45 @@ def in_time_priors(timestamp: float, episode_duration: float, priors: dict) -> b
 
     return False
 
+    return False
+
+def confident_enough(cuts: list, cfg: dict) -> bool:
+    """
+    Checks if the detected cuts are confident enough based on MIN_CONFIDENCE.
+    """
+    min_confidence = cfg.get('MIN_CONFIDENCE', 0.70) # Default from env.template
+    if not cuts:
+        return False
+    return all(cut.get('confidence', 0) >= min_confidence for cut in cuts)
+
+def merge_and_pad(cuts: list, padding_seconds: float) -> list:
+    """
+    Merges overlapping cuts and applies padding.
+    """
+    if not cuts:
+        return []
+
+    # Sort cuts by start time
+    sorted_cuts = sorted(cuts, key=lambda x: x['start'])
+    
+    merged = []
+    for cut in sorted_cuts:
+        start = max(0.0, cut['start'] - padding_seconds)
+        end = cut['end'] + padding_seconds
+
+        if not merged or start > merged[-1]['end']:
+            merged.append({'start': start, 'end': end})
+        else:
+            merged[-1]['end'] = max(merged[-1]['end'], end)
+    return merged
+
+def filter_by_policy(cuts: list) -> list:
+    """
+    Applies policy rules to filter cuts (e.g., remove very short cuts).
+    For now, a placeholder.
+    """
+    return cuts
+
 def slide(segments, size_s, step_s):
     """
     Slides a window over transcription segments.
@@ -100,9 +139,8 @@ def detect_ads_fast(audio_path, episode_meta, show_profile, cfg):
             if matches_ad_chapter(c['title']):
                 cuts.append({'start': c['start'], 'end': c['end'], 'type': "chapter", 'confidence': 0.99})
 
-    # TODO: Implement confident_enough
-    # if confident_enough(cuts, cfg):
-    #     return merge_and_pad(cuts, cfg.padding_seconds)
+    if confident_enough(cuts, cfg):
+        return merge_and_pad(cuts, cfg.get('detector', {}).get('padding_seconds', 8)) # Default padding from config
 
     # 2) Transcript rules (small model, VAD, word timestamps)
     # Assuming cfg.FAST_MODEL, cfg.FAST_VAD from config
