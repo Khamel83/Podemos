@@ -62,8 +62,9 @@ def process_episode(episode_id: int):
 
         codec = app_cfg.get('encoding', {}).get('codec', 'mp3')
         bitrate = app_cfg.get('encoding', {}).get('bitrate', 'v4')
+        normalize_loudness = app_cfg.get('encoding', {}).get('normalize_loudness', False)
 
-        success = cut_with_ffmpeg(episode.original_file_path, keep_segments, cleaned_output_path, codec=codec, bitrate=bitrate)
+        success = cut_with_ffmpeg(episode.original_file_path, keep_segments, cleaned_output_path, codec=codec, bitrate=bitrate, normalize_loudness=normalize_loudness)
 
         if success:
             episode.cleaned_file_path = cleaned_output_path

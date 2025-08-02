@@ -1,7 +1,7 @@
 import subprocess
 import os
 
-def cut_with_ffmpeg(input_mp3: str, keeps: list, output_path: str, codec: str = "mp3", bitrate: str = "v4") -> bool:
+def cut_with_ffmpeg(input_mp3: str, keeps: list, output_path: str, codec: str = "mp3", bitrate: str = "v4", normalize_loudness: bool = False) -> bool:
     """
     Cuts and concatenates audio segments using ffmpeg.
 
@@ -11,6 +11,7 @@ def cut_with_ffmpeg(input_mp3: str, keeps: list, output_path: str, codec: str = 
         output_path: Path for the output cleaned MP3 file.
         codec: Audio codec for output (e.g., "mp3", "aac").
         bitrate: Audio bitrate for output (e.g., "v4" for VBR MP3, "96k").
+        normalize_loudness: Whether to apply EBU R 128 loudness normalization.
 
     Returns:
         True if successful, False otherwise.
@@ -24,7 +25,11 @@ def cut_with_ffmpeg(input_mp3: str, keeps: list, output_path: str, codec: str = 
         filter_complex.append(f"[0:a]atrim=start={k[0]}:end={k[1]},asetpts=PTS-STARTPTS[s{i}]")
     
     concat_refs = ''.join([f"[s{i}]" for i in range(len(keeps))])
-    filter_complex.append(f"{concat_refs}concat=n={len(keeps)}:v=0:a=1[outa]")
+    
+    if normalize_loudness:
+        filter_complex.append(f"{concat_refs}concat=n={len(keeps)}:v=0:a=1[concat_out];[concat_out]loudnorm=I=-23:LRA=7:TP=-2[outa]")
+    else:
+        filter_complex.append(f"{concat_refs}concat=n={len(keeps)}:v=0:a=1[outa]")
 
     command = [
         "ffmpeg",

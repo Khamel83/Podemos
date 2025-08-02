@@ -17,4 +17,4 @@ detector:
 encoding:
   codec: mp3
   bitrate: v4
-  normalize_loudness: false
+  normalize_loudness: false # New option for loudness normalization
