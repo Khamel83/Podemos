@@ -45,6 +45,7 @@ def cut_with_ffmpeg(input_mp3: str, keeps: list, output_path: str, codec: str = 
         command.extend([f"-b:a", bitrate])
 
     command.append(output_path)
+    command.append("-y") # Overwrite output files without asking
 
     print(f"Executing FFmpeg command: {' '.join(command)}")
     try:
@@ -70,7 +71,7 @@ if __name__ == "__main__":
     # ffmpeg -f lavfi -i "sine=frequency=1000:duration=30" input.mp3
     
     # Ensure data/cleaned directory exists
-    cleaned_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..\', '..\', 'data\', 'cleaned')
+    cleaned_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'cleaned')
     if not os.path.exists(cleaned_dir):
         os.makedirs(cleaned_dir)
 
