@@ -1,0 +1,18 @@
+phrases:
+  - "brought to you by"
+  - "presented by"
+  - "sponsor"
+  - "promo code"
+  - "use code"
+  - "visit"
+  - "slash"
+  - "free trial"
+  - "risk-free"
+  - "terms apply"
+url_patterns:
+  - "\bhttps?://[\w\.-]+\.[a-z]{2,}\S*"
+  - "\b[A-Za-z0-9.-]+\.(com|io|ai|net)\b"
+price_patterns:
+  - "\b\$\d+"
+  - "\b\d+%\s*off\b"
+aggressiveness: conservative

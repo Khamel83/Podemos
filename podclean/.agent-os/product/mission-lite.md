@@ -1,0 +1,3 @@
+# Podemos Project Mission (Condensed)
+
+The Podemos project (`podclean`) is a specialized pre-processor for podcast content. It provides cleaned (ad-removed) audio and high-quality, structured transcripts, seamlessly integrating with the "Atlas" project. Its goal is to offload complex podcast processing from Atlas, ensuring consistent cleaned audio and accurate transcripts, and streamlining data flow.

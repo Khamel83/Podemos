@@ -1,0 +1,20 @@
+poll_interval_sec: 300
+expose_originals: false
+use_per_show_feeds: false
+publish_pubdate: original   # or: cleaned_ready
+
+detector:
+  use_chapters: true
+  use_text_rules: true
+  use_audio_cues: false     # enable in v2 if needed
+  require_signals: 2
+  padding_seconds: 8
+  priors:
+    pre_roll_max_s: 150
+    mid_roll_pct: [0.20, 0.70]
+    post_roll_last_s: 120
+
+encoding:
+  codec: mp3
+  bitrate: v4
+  normalize_loudness: false
