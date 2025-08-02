@@ -62,7 +62,9 @@ def process_episode(episode_id: int):
             os.makedirs(CLEANED_DIR)
         
         # Generate a unique filename for the cleaned audio
-        cleaned_filename = f"{os.path.splitext(os.path.basename(episode.original_file_path))[0]}_cleaned.mp3"
+        original_filename_base = os.path.splitext(os.path.basename(episode.original_file_path))[0]
+        file_extension = os.path.splitext(os.path.basename(episode.original_file_path))[1] or ".mp3"
+        cleaned_filename = f"{original_filename_base}_CLEAN{file_extension}"
         cleaned_output_path = os.path.join(CLEANED_DIR, cleaned_filename)
 
         codec = app_cfg.encoding.codec
