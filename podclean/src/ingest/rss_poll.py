@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from src.store.db import get_session, add_or_update_episode
 from src.dl.fetcher import download_file
+from src.dl.integrity import get_audio_duration
 
 # Define the base directory for original audio files
 ORIGINALS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'originals')
@@ -38,6 +39,10 @@ def poll_feed(feed_url: str):
                 downloaded_path = download_file(episode.original_audio_url, ORIGINALS_DIR)
                 if downloaded_path:
                     episode.original_file_path = downloaded_path
+                    # Get duration after download
+                    duration = get_audio_duration(downloaded_path)
+                    if duration is not None:
+                        episode.original_duration = duration
                     episode.status = 'downloaded'
                     session.add(episode)
                     session.commit()
@@ -57,4 +62,5 @@ if __name__ == "__main__":
     print("This script is intended to be run as part of the main application.")
     print("Please ensure 'feedparser' and 'requests' are installed if you intend to test it directly.")
     # Example: poll_feed("http://www.example.com/podcast.rss")
+
 
