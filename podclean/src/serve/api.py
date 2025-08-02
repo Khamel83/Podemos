@@ -75,7 +75,7 @@ async def get_new_episodes(limit: int = 10, offset: int = 0):
         # For now, return episodes that have been processed (cut or transcribed)
         # In a real scenario, this might involve a 'published' flag or a timestamp
         episodes = session.query(Episode).filter(Episode.status.in_(['cut', 'transcribed']))\
-                                        .order_by(Episode.pub_date.desc())
+                                        .order_by(Episode.pub_date.desc())\
                                         .offset(offset).limit(limit).all()
         
         # Return a simplified list of episode data for Atlas to consume
@@ -98,6 +98,7 @@ async def get_new_episodes(limit: int = 10, offset: int = 0):
                 "show_author": ep.show_author,
             } for ep in episodes
         ]
+
 
 @app.get("/status")
 async def get_status():
@@ -133,7 +134,7 @@ if __name__ == "__main__":
     import uvicorn
     # Ensure the media base directory exists
     app_cfg = load_app_config()
-    media_base_path = app_cfg.PODCLEAN_MEDIA_BASE_URL
+    media_base_path = app_cfg.PODCLEAN_MEDIA_BASE_PATH
     if not os.path.exists(media_base_path):
         os.makedirs(media_base_path)
     
