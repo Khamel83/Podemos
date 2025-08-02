@@ -20,4 +20,4 @@ encoding:
   normalize_loudness: false
 
 MIN_CONFIDENCE: 0.70 # Default confidence threshold for ad detection
-FULL_PASS_ENABLED: false # New option for loudness normalization
+FULL_PASS_ENABLED: true # New option for loudness normalization
