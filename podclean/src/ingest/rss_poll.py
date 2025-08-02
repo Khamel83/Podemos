@@ -1,7 +1,12 @@
 import feedparser
+import os
 from datetime import datetime
 from sqlalchemy.orm import Session
 from src.store.db import get_session, add_or_update_episode
+from src.dl.fetcher import download_file
+
+# Define the base directory for original audio files
+ORIGINALS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'originals')
 
 def poll_feed(feed_url: str):
     feed = feedparser.parse(feed_url)
@@ -24,12 +29,32 @@ def poll_feed(feed_url: str):
             continue
 
         with get_session() as session:
-            add_or_update_episode(session, episode_data)
-            print(f"Processed episode: {episode_data['title']} from {episode_data['show_name']}")
+            episode = add_or_update_episode(session, episode_data)
+            print(f"Processed episode: {episode.title} from {episode.show_name}")
+
+            # Download audio if not already downloaded
+            if episode.original_audio_url and not episode.original_file_path:
+                print(f"Attempting to download: {episode.original_audio_url}")
+                downloaded_path = download_file(episode.original_audio_url, ORIGINALS_DIR)
+                if downloaded_path:
+                    episode.original_file_path = downloaded_path
+                    episode.status = 'downloaded'
+                    session.add(episode)
+                    session.commit()
+                    session.refresh(episode)
+                    print(f"Downloaded and updated path for {episode.title}")
+                else:
+                    episode.status = 'download_failed'
+                    session.add(episode)
+                    session.commit()
+                    session.refresh(episode)
+                    print(f"Failed to download {episode.title}")
 
 if __name__ == "__main__":
     # Example usage (will be replaced by main runner)
-    # This requires 'feedparser' to be installed: pip install feedparser
+    # This requires 'feedparser' and 'requests' to be installed: pip install feedparser requests
     # And a test RSS feed URL
     print("This script is intended to be run as part of the main application.")
-    print("Please ensure 'feedparser' is installed if you intend to test it directly.")
+    print("Please ensure 'feedparser' and 'requests' are installed if you intend to test it directly.")
+    # Example: poll_feed("http://www.example.com/podcast.rss")
+
