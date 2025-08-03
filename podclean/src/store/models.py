@@ -28,9 +28,12 @@ class Episode(Base):
     description = Column(Text)
     ad_segments_json = Column(Text) # JSON string of detected ad segments
     transcript_json = Column(Text) # JSON string of the full transcript
+    fast_transcript_json = Column(Text) # JSON string of the fast transcript
     cleaned_chapters_json = Column(Text) # JSON string of adjusted chapters after cutting
     chapters_json = Column(Text) # Raw chapters JSON from RSS feed
     md_transcript_file_path = Column(String) # Path to the Markdown transcript file
+    retry_count = Column(Integer, default=0) # Number of times processing has been retried
+    last_error = Column(Text) # Stores the last error message
 
     def __repr__(self):
         return f"<Episode(title='{self.title}', show='{self.show_name}', status='{self.status}')>"

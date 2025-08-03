@@ -29,52 +29,107 @@ def scheduled_job():
         except Exception as e:
             logger.error(f"Error polling feed {feed_url}: {e}")
 
-    # Process newly downloaded episodes based on backlog processing strategy
-    backlog_strategy = app_config.backlog_processing.strategy
-    last_n_episodes_count = app_config.backlog_processing.last_n_episodes_count
-
+    # Process newly downloaded episodes (ad detection and cutting)
     with get_session() as session:
-        # Process newly downloaded episodes (ad detection and cutting)
-        new_episodes_for_initial_processing = session.query(Episode).filter_by(status='downloaded').all()
-        if new_episodes_for_initial_processing:
-            logger.info(f"Found {len(new_episodes_for_initial_processing)} episodes for initial processing.")
-            for episode in new_episodes_for_initial_processing:
+        app_config = load_app_config()
+        max_retries = app_config.MAX_PROCESSING_RETRIES
+
+        # Initial processing: downloaded or previously failed initial processing
+        initial_processing_candidates = session.query(Episode).filter(
+            (Episode.status == 'downloaded') |
+            ((Episode.status == 'processing_failed') & (Episode.retry_count < max_retries))
+        ).all()
+
+        if initial_processing_candidates:
+            logger.info(f"Found {len(initial_processing_candidates)} episodes for initial processing (downloaded or retrying failed). ")
+            for episode in initial_processing_candidates:
                 try:
-                    logger.info(f"Performing initial processing (ad detection, cutting) for episode: {episode.title}")
+                    logger.info(f"Performing initial processing (ad detection, cutting) for episode: {episode.title} (ID: {episode.id})")
+                    # Reset error and increment retry count before processing attempt
+                    episode.last_error = None
+                    episode.retry_count += 1
+                    session.add(episode)
+                    session.commit()
+
                     process_episode(episode.id)
+                    # Status is updated by process_episode to 'cut_ready_for_serving' or 'cut_failed'
+
                 except Exception as e:
-                    logger.error(f"Error during initial processing of episode {episode.id}: {e}")
+                    error_msg = str(e)
+                    logger.error(f"Error during initial processing of episode {episode.id}: {error_msg}")
+                    episode.last_error = error_msg
+                    if episode.retry_count >= max_retries:
+                        episode.status = 'failed_permanently'
+                        logger.error(f"Episode {episode.id} failed permanently after {max_retries} retries.")
+                    else:
+                        episode.status = 'processing_failed'
+                        logger.warning(f"Episode {episode.id} failed, retrying ({episode.retry_count}/{max_retries}).")
+                    session.add(episode)
+                    session.commit()
         else:
-            logger.info("No new episodes for initial processing.")
+            logger.info("No new episodes for initial processing or retries.")
 
         # Process episodes ready for full transcription based on backlog strategy
+        # Also include episodes that previously failed full transcription and are within retry limits
         episodes_for_full_transcription = []
+        
+        # Load app_config again to ensure latest values for backlog_processing
+        app_config = load_app_config()
+        backlog_strategy = app_config.backlog_processing.strategy
+        last_n_episodes_count = app_config.backlog_processing.last_n_episodes_count
+
         if backlog_strategy == "newest_only":
             shows = session.query(Episode.show_name).distinct().all()
             for show_name_tuple in shows:
                 show_name = show_name_tuple[0]
-                newest_episode = session.query(Episode).filter_by(show_name=show_name, status='cut_ready_for_serving').order_by(Episode.pub_date.desc()).first()
+                newest_episode = session.query(Episode).filter(
+                    (Episode.show_name == show_name) &
+                    ((Episode.status == 'cut_ready_for_serving') | ((Episode.status == 'full_transcription_failed') & (Episode.retry_count < max_retries)))
+                ).order_by(Episode.pub_date.desc()).first()
                 if newest_episode:
                     episodes_for_full_transcription.append(newest_episode)
         elif backlog_strategy == "last_n_episodes":
             shows = session.query(Episode.show_name).distinct().all()
             for show_name_tuple in shows:
                 show_name = show_name_tuple[0]
-                latest_n_episodes = session.query(Episode).filter_by(show_name=show_name, status='cut_ready_for_serving').order_by(Episode.pub_date.desc()).limit(last_n_episodes_count).all()
+                latest_n_episodes = session.query(Episode).filter(
+                    (Episode.show_name == show_name) &
+                    ((Episode.status == 'cut_ready_for_serving') | ((Episode.status == 'full_transcription_failed') & (Episode.retry_count < max_retries)))
+                ).order_by(Episode.pub_date.desc()).limit(last_n_episodes_count).all()
                 episodes_for_full_transcription.extend(latest_n_episodes)
         else: # "all" strategy or any other unrecognized strategy
-            episodes_for_full_transcription = session.query(Episode).filter_by(status='cut_ready_for_serving').all()
+            episodes_for_full_transcription = session.query(Episode).filter(
+                (Episode.status == 'cut_ready_for_serving') | ((Episode.status == 'full_transcription_failed') & (Episode.retry_count < max_retries)))
+            ).all()
 
         if episodes_for_full_transcription:
-            logger.info(f"Found {len(episodes_for_full_transcription)} episodes for full transcription based on backlog strategy '{backlog_strategy}'.")
+            logger.info(f"Found {len(episodes_for_full_transcription)} episodes for full transcription based on backlog strategy '{backlog_strategy}' (including retries).")
             for episode in episodes_for_full_transcription:
                 try:
-                    logger.info(f"Performing full transcription for episode: {episode.title}")
+                    logger.info(f"Performing full transcription for episode: {episode.title} (ID: {episode.id})")
+                    # Reset error and increment retry count before processing attempt
+                    episode.last_error = None
+                    episode.retry_count += 1
+                    session.add(episode)
+                    session.commit()
+
                     perform_full_transcription(episode.id)
+                    # Status is updated by perform_full_transcription to 'transcribed' or 'full_transcription_failed'
+
                 except Exception as e:
-                    logger.error(f"Error during full transcription of episode {episode.id}: {e}")
+                    error_msg = str(e)
+                    logger.error(f"Error during full transcription of episode {episode.id}: {error_msg}")
+                    episode.last_error = error_msg
+                    if episode.retry_count >= max_retries:
+                        episode.status = 'failed_permanently'
+                        logger.error(f"Episode {episode.id} failed permanently after {max_retries} retries.")
+                    else:
+                        episode.status = 'full_transcription_failed'
+                        logger.warning(f"Episode {episode.id} failed, retrying ({episode.retry_count}/{max_retries}).")
+                    session.add(episode)
+                    session.commit()
         else:
-            logger.info("No episodes ready for full transcription.")
+            logger.info("No episodes ready for full transcription or retries.")
 
     # Run cleanup job
     from src.store.cleanup import cleanup_old_episodes

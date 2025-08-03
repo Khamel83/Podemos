@@ -75,6 +75,9 @@ class AppConfig(BaseModel):
     feed_username: str = "podemos_user"
     feed_password: str = "change_this_password"
 
+    # Error Handling
+    MAX_PROCESSING_RETRIES: int = 3
+
 class ShowRules(BaseModel):
     phrases: List[str] = Field(default_factory=list)
     url_patterns: List[str] = Field(default_factory=list)
