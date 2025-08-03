@@ -80,8 +80,10 @@ podclean/
 4.  **Initialize Database:**
     `PYTHONPATH=./podclean python3 src/main.py --init-db`
 
-5.  **Start Polling (Example):**
-    `PYTHONPATH=./podclean python3 src/main.py --poll-feed "http://example.com/feed.xml" --poll-limit 5`
+5.  **Manage Feeds (Examples):**
+    *   **Add a feed:** `PYTHONPATH=./podclean python3 src/main.py --add-feed "http://example.com/new_feed.xml"`
+    *   **Remove a feed:** `PYTHONPATH=./podclean python3 src/main.py --remove-feed "http://example.com/old_feed.xml"`
+    *   **Import from OPML:** `PYTHONPATH=./podclean python3 src/main.py --import-opml "/path/to/your/overcast.opml" --poll-limit 5`
 
 6.  **Process an Episode (Example):**
     `PYTHONPATH=./podclean python3 src/main.py --process-episode 1`
@@ -89,7 +91,7 @@ podclean/
 7.  **Run the Server (Example):**
     `PYTHONPATH=./podclean python3 src/main.py --serve`
     Access the dashboard at `http://localhost:8080/`
-    *When running with `--serve`, an internal scheduler will automatically poll configured feeds and process new episodes every 15 minutes.*
+    *When running with `--serve`, an internal scheduler will automatically poll configured feeds and process new episodes every 15 minutes, applying the `backlog_processing` strategy defined in `config/app.yaml`.*
 
 # Features
 
