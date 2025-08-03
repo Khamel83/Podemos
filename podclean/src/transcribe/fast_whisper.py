@@ -52,7 +52,7 @@ def fast_transcribe(audio_path, model_size="small.en", **_):
         whisper_cpp_executable, "-m", model_file,
         "-f", audio_path, "-osrt", "-of", out_prefix,
         # add light VAD to reduce junk segments:
-        "-vtt"  # optional: also write VTT if you prefer
+        # "-vtt"  # optional: also write VTT if you prefer
     ]
     
     print(f"Running whisper.cpp command: {' '.join(cmd)}")
