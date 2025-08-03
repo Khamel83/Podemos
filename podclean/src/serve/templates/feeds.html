@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Feeds{% endblock %}
+
+{% block content %}
+    <h2>Manage Podcast Feeds</h2>
+
+    {% if message %}
+        <div class="message {{ message_type }}">{{ message }}</div>
+    {% endif %}
+
+    <h3>Add New Feed</h3>
+    <form action="/feeds/add" method="post">
+        <div class="form-group">
+            <label for="feed_url">Feed URL:</label>
+            <input type="text" id="feed_url" name="feed_url" placeholder="Enter RSS feed URL" required>
+        </div>
+        <div class="form-group">
+            <button type="submit">Add Feed</button>
+        </div>
+    </form>
+
+    <h3>Current Feeds</h3>
+    {% if feeds %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Feed URL</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for feed in feeds %}
+                <tr>
+                    <td>{{ feed }}</td>
+                    <td>
+                        <form action="/feeds/remove" method="post" style="display:inline;">
+                            <input type="hidden" name="feed_url" value="{{ feed }}">
+                            <button type="submit">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No feeds configured yet. Add one above!</p>
+    {% endif %}
+{% endblock %}

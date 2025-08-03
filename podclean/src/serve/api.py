@@ -6,7 +6,7 @@ from src.feed.meta_feed import build_meta_feed
 from src.store.db import init_db, get_session
 from src.store.models import Episode
 from src.processor.episode_processor import process_episode, perform_full_transcription # Import both
-from src.config.config_loader import load_app_config # Import config loader
+from src.config.config_loader import load_app_config, add_feed_to_config, remove_feed_from_config # Import config loader and feed management functions
 from src.config.config import AppConfig # Import AppConfig
 from fastapi.staticfiles import StaticFiles # Import StaticFiles
 from sqlalchemy import func # Import func for counting
@@ -134,6 +134,28 @@ async def process_episode_web(episode_id: int = Form(...)):
 async def perform_full_transcription_web(episode_id: int = Form(...)):
     perform_full_transcription(episode_id)
     return RedirectResponse(url="/", status_code=303)
+
+@app.get("/feeds", response_class=HTMLResponse)
+async def manage_feeds(request: Request, message: str = None, message_type: str = None):
+    app_config = load_app_config()
+    feeds = app_config.feeds if hasattr(app_config, 'feeds') else []
+    return templates.TemplateResponse("feeds.html", {"request": request, "feeds": feeds, "message": message, "message_type": message_type})
+
+@app.post("/feeds/add", response_class=RedirectResponse, status_code=303)
+async def add_feed_web(feed_url: str = Form(...)):
+    try:
+        add_feed_to_config(feed_url)
+        return RedirectResponse(url="/feeds?message=Feed added successfully&message_type=success", status_code=303)
+    except Exception as e:
+        return RedirectResponse(url=f"/feeds?message=Error adding feed: {e}&message_type=error", status_code=303)
+
+@app.post("/feeds/remove", response_class=RedirectResponse, status_code=303)
+async def remove_feed_web(feed_url: str = Form(...)):
+    try:
+        remove_feed_from_config(feed_url)
+        return RedirectResponse(url="/feeds?message=Feed removed successfully&message_type=success", status_code=303)
+    except Exception as e:
+        return RedirectResponse(url=f"/feeds?message=Error removing feed: {e}&message_type=error", status_code=303)
 
 @app.post("/mark")
 async def post_mark(mark_request: MarkRequest):
