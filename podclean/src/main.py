@@ -17,6 +17,7 @@ def main():
     parser.add_argument("--poll-feed", type=str, help="Poll a given RSS feed URL.")
     parser.add_argument("--poll-limit", type=int, help="Limit the number of episodes to poll.")
     parser.add_argument("--process-episode", type=int, help="Process a specific episode by ID.")
+    parser.add_argument("--list-episodes", action="store_true", help="List all episodes in the database.")
     parser.add_argument("--serve", action="store_true", help="Start the FastAPI server.")
 
     args = parser.parse_args()
@@ -39,6 +40,18 @@ def main():
         from src.processor.episode_processor import process_episode
         process_episode(args.process_episode)
         logger.info("Episode processing complete.")
+
+    if args.list_episodes:
+        logger.info("Listing all episodes...")
+        from src.store.db import get_session
+        from src.store.models import Episode
+        with get_session() as session:
+            episodes = session.query(Episode).all()
+            if not episodes:
+                logger.info("No episodes found in the database.")
+            for e in episodes:
+                print(f'ID: {e.id}, Title: {e.title}, Show: {e.show_name}, Status: {e.status}')
+        logger.info("Episode listing complete.")
 
     if args.serve:
         logger.info("Starting FastAPI server...")
