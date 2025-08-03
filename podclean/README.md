@@ -89,6 +89,7 @@ podclean/
 7.  **Run the Server (Example):**
     `PYTHONPATH=./podclean python3 src/main.py --serve`
     Access the dashboard at `http://localhost:8080/`
+    *When running with `--serve`, an internal scheduler will automatically poll configured feeds and process new episodes every 15 minutes.*
 
 # Features
 
@@ -114,8 +115,9 @@ podclean/
 
 # Future Enhancements
 
+*   **Automated Backlog Prioritization:** Implement options to prioritize processing of newer episodes for news-based podcasts, or to process only a certain number of the latest episodes from a feed.
+*   **Basic Cleanup/Retention Policy:** Automatically delete old processed files after a configurable period or number of episodes to manage disk space.
 *   **Improved Ad Detection:** More sophisticated techniques (e.g., audio fingerprinting, ML).
 *   **User-Specific Rules:** Allow users to define custom ad detection rules.
 *   **Enhanced Web Interface:** More interactive dashboard, user management.
-*   **Real-time Processing:** Streamlined processing for immediate availability.
 *   **Apple Podcasts API Integration:** Supplement RSS feed data with structured information from Apple Podcasts.
