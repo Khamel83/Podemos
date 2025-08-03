@@ -1,6 +1,6 @@
 import yaml
 import os
-from src.config.config import AppConfig, ShowRules, DetectorConfig, EncodingConfig
+from src.config.config import AppConfig, ShowRules, DetectorConfig, EncodingConfig, RetentionPolicyConfig, BacklogProcessingConfig
 
 def load_config(config_path: str) -> dict:
     """
@@ -47,6 +47,24 @@ def load_show_rules(show_slug: str = None) -> ShowRules:
         return ShowRules(**merged_rules_data)
     
     return ShowRules(**default_rules_data)
+
+def save_show_rules(show_slug: str, backlog_strategy: str, last_n_episodes_count: int, aggressiveness: str):
+    base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'config', 'shows')
+    show_rules_path = os.path.join(base_dir, f'{show_slug}.rules.yaml')
+
+    # Load existing rules if any, otherwise start with an empty dict
+    current_rules = load_config(show_rules_path)
+
+    # Update the specific fields
+    if 'backlog_processing' not in current_rules:
+        current_rules['backlog_processing'] = {}
+    current_rules['backlog_processing']['strategy'] = backlog_strategy
+    current_rules['backlog_processing']['last_n_episodes_count'] = last_n_episodes_count
+    current_rules['aggressiveness'] = aggressiveness
+
+    with open(show_rules_path, 'w') as f:
+        yaml.safe_dump(current_rules, f, sort_keys=False)
+    logger.info(f"Saved settings for show {show_slug} to {show_rules_path}")
 
 def load_app_config() -> AppConfig:
     """

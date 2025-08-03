@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Show Settings: {{ show_name }}{% endblock %}
+
+{% block content %}
+    <h2>Show Settings: {{ show_name }}</h2>
+
+    {% if message %}
+        <div class="message {{ message_type }}">{{ message }}</div>
+    {% endif %}
+
+    <form action="/feeds/{{ show_name }}/settings" method="post">
+        <h3>Backlog Processing Strategy</h3>
+        <div class="form-group">
+            <label for="backlog_strategy">Strategy:</label>
+            <select id="backlog_strategy" name="backlog_strategy">
+                <option value="all" {% if show_rules.backlog_processing.strategy == "all" %}selected{% endif %}>All Episodes</option>
+                <option value="newest_only" {% if show_rules.backlog_processing.strategy == "newest_only" %}selected{% endif %}>Newest Only</option>
+                <option value="last_n_episodes" {% if show_rules.backlog_processing.strategy == "last_n_episodes" %}selected{% endif %}>Last N Episodes</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="last_n_episodes_count">Last N Episodes Count (if applicable):</label>
+            <input type="number" id="last_n_episodes_count" name="last_n_episodes_count" value="{{ show_rules.backlog_processing.last_n_episodes_count }}" min="1">
+        </div>
+
+        <h3>Ad Detection Aggressiveness</h3>
+        <div class="form-group">
+            <label for="aggressiveness">Aggressiveness:</label>
+            <select id="aggressiveness" name="aggressiveness">
+                <option value="conservative" {% if show_rules.aggressiveness == "conservative" %}selected{% endif %}>Conservative</option>
+                <option value="moderate" {% if show_rules.aggressiveness == "moderate" %}selected{% endif %}>Moderate</option>
+                <option value="aggressive" {% if show_rules.aggressiveness == "aggressive" %}selected{% endif %}>Aggressive</option>
+            </select>
+        </div>
+
+        <button type="submit">Save Settings</button>
+    </form>
+{% endblock %}

@@ -207,6 +207,36 @@ async def remove_feed_web(feed_url: str = Form(...)):
     except Exception as e:
         return RedirectResponse(url=f"/feeds?message=Error removing feed: {e}&message_type=error", status_code=303)
 
+@app.post("/feeds/remove", response_class=RedirectResponse, status_code=303)
+async def remove_feed_web(feed_url: str = Form(...)):
+    try:
+        remove_feed_from_config(feed_url)
+        return RedirectResponse(url="/feeds?message=Feed removed successfully&message_type=success", status_code=303)
+    except Exception as e:
+        return RedirectResponse(url=f"/feeds?message=Error removing feed: {e}&message_type=error", status_code=303)
+
+@app.get("/feeds/{show_name}/settings", response_class=HTMLResponse)
+async def get_show_settings(request: Request, show_name: str, message: str = None, message_type: str = None):
+    show_rules = load_show_rules(show_name) # Load show-specific rules
+    return templates.TemplateResponse("show_settings.html", {"request": request, "show_name": show_name, "show_rules": show_rules, "message": message, "message_type": message_type})
+
+@app.post("/feeds/{show_name}/settings", response_class=RedirectResponse, status_code=303)
+async def post_show_settings(
+    show_name: str,
+    backlog_strategy: str = Form(...),
+    last_n_episodes_count: int = Form(...),
+    aggressiveness: str = Form(...)
+):
+    try:
+        # Update show-specific rules in config/shows/{show_name}.rules.yaml
+        # This requires a new function in config_loader.py to save show rules
+        from src.config.config_loader import save_show_rules
+        save_show_rules(show_name, backlog_strategy, last_n_episodes_count, aggressiveness)
+
+        return RedirectResponse(url=f"/feeds/{show_name}/settings?message=Settings saved successfully&message_type=success", status_code=303)
+    except Exception as e:
+        return RedirectResponse(url=f"/feeds/{show_name}/settings?message=Error saving settings: {e}&message_type=error", status_code=303)
+
 @app.post("/mark")
 async def post_mark(mark_request: MarkRequest):
     with get_session() as session:
