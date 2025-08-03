@@ -70,6 +70,11 @@ class AppConfig(BaseModel):
     # Backlog Processing
     backlog_processing: BacklogProcessingConfig = Field(default_factory=BacklogProcessingConfig)
 
+    # Feed Authentication
+    feed_auth_enabled: bool = False
+    feed_username: str = "podemos_user"
+    feed_password: str = "change_this_password"
+
 class ShowRules(BaseModel):
     phrases: List[str] = Field(default_factory=list)
     url_patterns: List[str] = Field(default_factory=list)

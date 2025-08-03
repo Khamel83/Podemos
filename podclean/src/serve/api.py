@@ -6,7 +6,57 @@ from src.feed.meta_feed import build_meta_feed
 from src.store.db import init_db, get_session
 from src.store.models import Episode
 from src.processor.episode_processor import process_episode, perform_full_transcription # Import both
+from fastapi import FastAPI, Response, HTTPException, Request, Form, Depends
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from pydantic import BaseModel
+from src.feed.meta_feed import build_meta_feed
+from src.store.db import init_db, get_session
+from src.store.models import Episode
+from src.processor.episode_processor import process_episode, perform_full_transcription # Import both
 from src.config.config_loader import load_app_config, add_feed_to_config, remove_feed_from_config # Import config loader and feed management functions
+from src.config.config import AppConfig # Import AppConfig
+from fastapi.staticfiles import StaticFiles # Import StaticFiles
+from sqlalchemy import func # Import func for counting
+
+app = FastAPI()
+
+templates = Jinja2Templates(directory="podclean/src/serve/templates")
+
+# Mount static files directory
+app.mount("/static", StaticFiles(directory="podclean/src/serve/static"), name="static")
+
+# Basic Authentication setup
+security = HTTPBasic()
+
+# Pydantic model for the /mark endpoint payload
+class MarkRequest(BaseModel):
+    episode_id: int
+    start: float
+    end: float
+    label: str # "ad" or "not_ad"
+
+# Initialize the database when the application starts
+@app.on_event("startup")
+async def startup_event():
+    init_db()
+    app_cfg: AppConfig = load_app_config()
+    app.base_url = app_cfg.PODCLEAN_BASE_URL # Load base URL from config
+
+async def verify_feed_credentials(credentials: HTTPBasicCredentials = Depends(security)):
+    app_cfg = load_app_config()
+    if app_cfg.feed_auth_enabled:
+        if not (credentials.username == app_cfg.feed_username and credentials.password == app_cfg.feed_password):
+            raise HTTPException(status_code=401, detail="Unauthorized")
+    return True
+
+@app.get("/feed.xml")
+async def get_feed(auth_ok: bool = Depends(verify_feed_credentials)):
+    # In a real application, base_url would come from config
+    base_url = app.base_url # Use the base_url from app state
+    feed_content = build_meta_feed(base_url)
+    return Response(content=feed_content, media_type="application/xml")
 from src.config.config import AppConfig # Import AppConfig
 from fastapi.staticfiles import StaticFiles # Import StaticFiles
 from sqlalchemy import func # Import func for counting
