@@ -116,7 +116,7 @@ podclean/
 # Future Enhancements
 
 *   **Automated Backlog Prioritization:** Implement options to prioritize processing of newer episodes for news-based podcasts, or to process only a certain number of the latest episodes from a feed.
-*   **Basic Cleanup/Retention Policy:** Automatically delete old processed files after a configurable period or number of episodes to manage disk space.
+*   **Basic Cleanup/Retention Policy:** Automatically delete old processed files and database entries based on configurable limits (e.g., keep only the X most recent episodes per show, or delete episodes older than Y days).
 *   **Improved Ad Detection:** More sophisticated techniques (e.g., audio fingerprinting, ML).
 *   **User-Specific Rules:** Allow users to define custom ad detection rules.
 *   **Enhanced Web Interface:** More interactive dashboard, user management.
