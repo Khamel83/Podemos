@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 
 def scheduled_job():
     logger.info("Running scheduled podcast update...")
-    # Get all feeds from app.yaml (assuming app.yaml has a 'feeds' list)
     from src.config.config_loader import load_app_config
     app_config = load_app_config()
-    feeds = app_config.feeds # Assuming 'feeds' is a list of URLs in app.yaml
 
+    # Poll feeds
+    feeds = app_config.feeds # Assuming 'feeds' is a list of URLs in app.yaml
     for feed_url in feeds:
         try:
             logger.info(f"Polling feed: {feed_url}")
@@ -29,11 +29,12 @@ def scheduled_job():
         except Exception as e:
             logger.error(f"Error polling feed {feed_url}: {e}")
 
-    # Process newly downloaded episodes (ad detection and cutting)
-    with get_session() as session:
-        app_config = load_app_config()
-        max_retries = app_config.MAX_PROCESSING_RETRIES
+    # Process newly downloaded episodes based on backlog processing strategy
+    backlog_strategy = app_config.backlog_processing.strategy
+    last_n_episodes_count = app_config.backlog_processing.last_n_episodes_count
+    max_retries = app_config.MAX_PROCESSING_RETRIES
 
+    with get_session() as session:
         # Initial processing: downloaded or previously failed initial processing
         initial_processing_candidates = session.query(Episode).filter(
             (Episode.status == 'downloaded') |
@@ -134,6 +135,74 @@ def scheduled_job():
     # Run cleanup job
     from src.store.cleanup import cleanup_old_episodes
     cleanup_old_episodes()
+
+def main():
+    parser = argparse.ArgumentParser(description="Podemos CLI for podcast processing.")
+    parser.add_argument("--init-db", action="store_true", help="Initialize the database schema.")
+    parser.add_argument("--poll-feed", type=str, help="Poll a given RSS feed URL.")
+    parser.add_argument("--poll-limit", type=int, help="Limit the number of episodes to poll.")
+    parser.add_argument("--import-opml", type=str, help="Import podcasts from an OPML file.")
+    parser.add_argument("--add-feed", type=str, help="Add a new RSS feed URL to the configuration.")
+    parser.add_argument("--remove-feed", type=str, help="Remove an RSS feed URL from the configuration.")
+    parser.add_argument("--process-episode", type=int, help="Process a specific episode by ID.")
+    parser.add_argument("--list-episodes", action="store_true", help="List all episodes in the database.")
+    parser.add_argument("--serve", action="store_true", help="Start the FastAPI server.")
+
+    args = parser.parse_args()
+
+    # Always initialize the database
+    logger.info("Initializing database...")
+    init_db()
+    logger.info("Database initialized.")
+
+    if args.init_db:
+        logger.info("Database already initialized by default.")
+
+    if args.poll_feed:
+        logger.info(f"Polling feed: {args.poll_feed}")
+        poll_feed(args.poll_feed, limit=args.poll_limit)
+        logger.info("Feed polling complete.")
+
+    if args.import_opml:
+        logger.info(f"Importing OPML from: {args.import_opml}")
+        import_opml(args.import_opml, poll_limit=args.poll_limit)
+        logger.info("OPML import complete.")
+
+    if args.add_feed:
+        from src.config.config_loader import add_feed_to_config
+        add_feed_to_config(args.add_feed)
+
+    if args.remove_feed:
+        from src.config.config_loader import remove_feed_from_config
+        remove_feed_from_config(args.remove_feed)
+
+    if args.process_episode:
+        logger.info(f"Processing episode ID: {args.process_episode}")
+        process_episode(args.process_episode)
+        logger.info("Episode processing complete.")
+
+    if args.list_episodes:
+        logger.info("Listing all episodes...")
+        with get_session() as session:
+            episodes = session.query(Episode).all()
+            if not episodes:
+                logger.info("No episodes found in the database.")
+            for e in episodes:
+                print(f'ID: {e.id}, Title: {e.title}, Show: {e.show_name}, Status: {e.status}')
+        logger.info("Episode listing complete.")
+
+    if args.serve:
+        logger.info("Starting FastAPI server...")
+        scheduler = BackgroundScheduler()
+        # Schedule the job to run every 15 minutes (adjust as needed)
+        scheduler.add_job(scheduled_job, 'interval', minutes=15)
+        scheduler.start()
+        logger.info("Scheduler started. Press Ctrl+C to exit.")
+        # The API app handles directory creation based on PODCLEAN_MEDIA_BASE_PATH
+        uvicorn.run(api_app, host="0.0.0.0", port=8080)
+
+if __name__ == "__main__":
+    main()
 
 def main():
     parser = argparse.ArgumentParser(description="Podemos CLI for podcast processing.")

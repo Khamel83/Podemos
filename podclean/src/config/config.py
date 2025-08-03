@@ -30,6 +30,11 @@ class AppConfig(BaseModel):
     PODCLEAN_PORT: int = 8080
     PODCLEAN_SECRET_TOKEN: str = "change_me"
 
+    # Scheduled Job Intervals (in minutes)
+    poll_interval_minutes: int = 15
+    process_interval_minutes: int = 5
+    cleanup_interval_minutes: int = 60
+
     # Media storage
     PODCLEAN_MEDIA_BASE_PATH: str = "./data"
 
