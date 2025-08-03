@@ -35,7 +35,7 @@ def parse_srt_to_segments(srt_path):
 def full_transcribe(audio_path: str, model_size: str = "medium", **_):
     model_map = {
         "tiny":"ggml-tiny.bin", "base":"ggml-base.bin",
-        "small.en":"ggml-small.en.bin", "small":"ggml-small.bin",
+        "small.en":"ggml-small.en.bin", "small":"ggml-small.en.bin", # Use small.en for small model
         "medium.en":"ggml-medium.en.bin", "medium":"ggml-medium.bin",
         "large-v1":"ggml-large-v1.bin", "large-v2":"ggml-large-v2.bin", "large":"ggml-large.bin"
     }

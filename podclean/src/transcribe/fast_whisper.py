@@ -35,7 +35,7 @@ def parse_srt_to_segments(srt_path):
 def fast_transcribe(audio_path, model_size="small.en", **_):
     model_map = {
         "tiny":"ggml-tiny.bin", "base":"ggml-base.bin",
-        "small.en":"ggml-small.en.bin", "small":"ggml-small.bin"
+        "small.en":"ggml-small.en.bin", "small":"ggml-small.en.bin" # Use small.en for small model
     }
     model_file = f"whisper.cpp/models/{model_map.get(model_size,'ggml-small.en.bin')}"
     out_prefix = tempfile.mktemp(prefix="wsp_")
