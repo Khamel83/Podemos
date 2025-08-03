@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+    <h2>Episode Dashboard</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Show</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for episode in episodes %}
+            <tr>
+                <td>{{ episode.id }}</td>
+                <td>{{ episode.title }}</td>
+                <td>{{ episode.show_name }}</td>
+                <td class="status-{{ episode.status }}">{{ episode.status }}</td>
+                <td>
+                    {% if episode.cleaned_file_path %}
+                        <a href="/audio/{{ episode.source_guid }}_CLEAN.mp3" target="_blank">Listen</a>
+                    {% endif %}
+                    {% if episode.md_transcript_file_path %}
+                        <a href="/transcripts/{{ episode.source_guid }}_CLEAN.md" target="_blank">Read MD</a>
+                    {% endif %}
+                    {% if episode.transcript_json %}
+                        <a href="/transcripts/{{ episode.source_guid }}_CLEAN.json" target="_blank">View JSON</a>
+                    {% endif %}
+                    {% if episode.status != 'transcribed' and episode.status != 'full_transcription_failed' %}
+                        <form action="/process_episode" method="post" style="display:inline;">
+                            <input type="hidden" name="episode_id" value="{{ episode.id }}">
+                            <button type="submit">Process</button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

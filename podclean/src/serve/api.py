@@ -1,17 +1,19 @@
-import os
-from fastapi import FastAPI, Response, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Response, HTTPException, Request, Form
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from src.feed.meta_feed import build_meta_feed
 from src.store.db import init_db, get_session
 from src.store.models import Episode
-from src.processor.episode_processor import process_episode # To reprocess episode after mark
+from src.processor.episode_processor import process_episode, perform_full_transcription # Import both
 from src.config.config_loader import load_app_config # Import config loader
 from src.config.config import AppConfig # Import AppConfig
 from fastapi.staticfiles import StaticFiles # Import StaticFiles
 from sqlalchemy import func # Import func for counting
 
 app = FastAPI()
+
+templates = Jinja2Templates(directory="podclean/src/serve/templates")
 
 # Mount static files directory
 app.mount("/static", StaticFiles(directory="podclean/src/serve/static"), name="static")
@@ -118,8 +120,20 @@ async def get_status():
         return {"episode_counts": dict(episode_counts)}
 
 @app.get("/")
-async def read_root():
-    return FileResponse("podclean/src/serve/static/index.html")
+async def read_root(request: Request):
+    with get_session() as session:
+        episodes = session.query(Episode).order_by(Episode.pub_date.desc()).all()
+        return templates.TemplateResponse("index.html", {"request": request, "episodes": episodes})
+
+@app.post("/process_episode")
+async def process_episode_web(episode_id: int = Form(...)):
+    process_episode(episode_id)
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/perform_full_transcription")
+async def perform_full_transcription_web(episode_id: int = Form(...)):
+    perform_full_transcription(episode_id)
+    return RedirectResponse(url="/", status_code=303)
 
 @app.post("/mark")
 async def post_mark(mark_request: MarkRequest):

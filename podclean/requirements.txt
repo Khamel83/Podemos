@@ -7,3 +7,4 @@ faster-whisper
 pyyaml
 pydantic
 APScheduler
+jinja2
