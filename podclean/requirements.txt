@@ -5,3 +5,5 @@ fastapi
 uvicorn
 faster-whisper
 pyyaml
+pydantic
+APScheduler
