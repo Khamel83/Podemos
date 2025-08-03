@@ -81,6 +81,8 @@ def main():
     parser.add_argument("--poll-feed", type=str, help="Poll a given RSS feed URL.")
     parser.add_argument("--poll-limit", type=int, help="Limit the number of episodes to poll.")
     parser.add_argument("--import-opml", type=str, help="Import podcasts from an OPML file.")
+    parser.add_argument("--add-feed", type=str, help="Add a new RSS feed URL to the configuration.")
+    parser.add_argument("--remove-feed", type=str, help="Remove an RSS feed URL from the configuration.")
     parser.add_argument("--process-episode", type=int, help="Process a specific episode by ID.")
     parser.add_argument("--list-episodes", action="store_true", help="List all episodes in the database.")
     parser.add_argument("--serve", action="store_true", help="Start the FastAPI server.")
@@ -104,6 +106,14 @@ def main():
         logger.info(f"Importing OPML from: {args.import_opml}")
         import_opml(args.import_opml, poll_limit=args.poll_limit)
         logger.info("OPML import complete.")
+
+    if args.add_feed:
+        from src.config.config_loader import add_feed_to_config
+        add_feed_to_config(args.add_feed)
+
+    if args.remove_feed:
+        from src.config.config_loader import remove_feed_from_config
+        remove_feed_from_config(args.remove_feed)
 
     if args.process_episode:
         logger.info(f"Processing episode ID: {args.process_episode}")

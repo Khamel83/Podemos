@@ -62,16 +62,51 @@ def load_app_config() -> AppConfig:
     # Handle nested Pydantic models
     detector_data = app_config_data.pop('detector', {})
     encoding_data = app_config_data.pop('encoding', {})
+    retention_policy_data = app_config_data.pop('retention_policy', {})
+    backlog_processing_data = app_config_data.pop('backlog_processing', {})
 
     # Create Pydantic models
     app_config_data['detector'] = DetectorConfig(**detector_data)
     app_config_data['encoding'] = EncodingConfig(**encoding_data)
+    app_config_data['retention_policy'] = RetentionPolicyConfig(**retention_policy_data)
+    app_config_data['backlog_processing'] = BacklogProcessingConfig(**backlog_processing_data)
 
     # Ensure PODCLEAN_MEDIA_BASE_PATH has a default value if not set
     if 'PODCLEAN_MEDIA_BASE_PATH' not in app_config_data:
         app_config_data['PODCLEAN_MEDIA_BASE_PATH'] = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data'))
 
     return AppConfig(**app_config_data)
+
+def _get_app_config_path() -> str:
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'config', 'app.yaml')
+
+def add_feed_to_config(feed_url: str):
+    config_path = _get_app_config_path()
+    with open(config_path, 'r+') as f:
+        config = yaml.safe_load(f)
+        if 'feeds' not in config or config['feeds'] is None:
+            config['feeds'] = []
+        if feed_url not in config['feeds']:
+            config['feeds'].append(feed_url)
+            f.seek(0) # Rewind to the beginning of the file
+            yaml.safe_dump(config, f, sort_keys=False)
+            f.truncate() # Truncate any remaining old content
+            logger.info(f"Added feed: {feed_url} to app.yaml")
+        else:
+            logger.warning(f"Feed already exists in app.yaml: {feed_url}")
+
+def remove_feed_from_config(feed_url: str):
+    config_path = _get_app_config_path()
+    with open(config_path, 'r+') as f:
+        config = yaml.safe_load(f)
+        if 'feeds' in config and config['feeds'] is not None and feed_url in config['feeds']:
+            config['feeds'].remove(feed_url)
+            f.seek(0) # Rewind to the beginning of the file
+            yaml.safe_dump(config, f, sort_keys=False)
+            f.truncate() # Truncate any remaining old content
+            logger.info(f"Removed feed: {feed_url} from app.yaml")
+        else:
+            logger.warning(f"Feed not found in app.yaml: {feed_url}")
 
 if __name__ == "__main__":
     # Example Usage
@@ -94,3 +129,15 @@ if __name__ == "__main__":
 
     # Clean up dummy file
     os.remove(dummy_show_rules_path)
+
+    # Test add/remove feed
+    test_feed_url = "http://example.com/test_feed.xml"
+    print(f"\nAdding test feed: {test_feed_url}")
+    add_feed_to_config(test_feed_url)
+    app_cfg_after_add = load_app_config()
+    print(f"Feeds after add: {app_cfg_after_add.feeds}")
+
+    print(f"\nRemoving test feed: {test_feed_url}")
+    remove_feed_from_config(test_feed_url)
+    app_cfg_after_remove = load_app_config()
+    print(f"Feeds after remove: {app_cfg_after_remove.feeds}")
