@@ -5,6 +5,7 @@ import logging
 
 from src.store.db import init_db
 from src.ingest.rss_poll import poll_feed
+from src.ingest.opml_import import import_opml
 from src.serve.api import app as api_app # Import the FastAPI app
 
 # Configure logging
@@ -16,6 +17,7 @@ def main():
     parser.add_argument("--init-db", action="store_true", help="Initialize the database schema.")
     parser.add_argument("--poll-feed", type=str, help="Poll a given RSS feed URL.")
     parser.add_argument("--poll-limit", type=int, help="Limit the number of episodes to poll.")
+    parser.add_argument("--import-opml", type=str, help="Import podcasts from an OPML file.")
     parser.add_argument("--process-episode", type=int, help="Process a specific episode by ID.")
     parser.add_argument("--list-episodes", action="store_true", help="List all episodes in the database.")
     parser.add_argument("--serve", action="store_true", help="Start the FastAPI server.")
@@ -34,6 +36,11 @@ def main():
         logger.info(f"Polling feed: {args.poll_feed}")
         poll_feed(args.poll_feed, limit=args.poll_limit)
         logger.info("Feed polling complete.")
+
+    if args.import_opml:
+        logger.info(f"Importing OPML from: {args.import_opml}")
+        import_opml(args.import_opml, poll_limit=args.poll_limit)
+        logger.info("OPML import complete.")
 
     if args.process_episode:
         logger.info(f"Processing episode ID: {args.process_episode}")
