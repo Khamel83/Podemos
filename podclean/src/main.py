@@ -43,6 +43,10 @@ def scheduled_job():
         else:
             logger.info("No new episodes to process.")
 
+    # Run cleanup job
+    from src.store.cleanup import cleanup_old_episodes
+    cleanup_old_episodes()
+
 def main():
     parser = argparse.ArgumentParser(description="Podemos CLI for podcast processing.")
     parser.add_argument("--init-db", action="store_true", help="Initialize the database schema.")

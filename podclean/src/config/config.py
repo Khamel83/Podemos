@@ -14,6 +14,11 @@ class EncodingConfig(BaseModel):
     bitrate: str = "v4"
     normalize_loudness: bool = False
 
+class RetentionPolicyConfig(BaseModel):
+    enabled: bool = True
+    max_episodes_per_show: int = 10
+    max_days_per_episode: int = 30
+
 class AppConfig(BaseModel):
     # Server settings
     PODCLEAN_BASE_URL: str = "http://localhost:8080"
@@ -54,6 +59,9 @@ class AppConfig(BaseModel):
 
     # Feature flags
     FULL_PASS_ENABLED: bool = False # New flag to control full pass transcription
+
+    # Retention Policy
+    retention_policy: RetentionPolicyConfig = Field(default_factory=RetentionPolicyConfig)
 
 class ShowRules(BaseModel):
     phrases: List[str] = Field(default_factory=list)
