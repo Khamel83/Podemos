@@ -15,6 +15,7 @@
 - **Podcast Processing**: feedparser 6.0.11
 
 ## AI and LLM Integration
+- **Transcription:** whisper.cpp (leveraging Apple Metal/Core ML for M-series Macs)
 - **LLM Routing**: litellm 1.74.6
 - **OpenAI API**: openai 1.97.0
 - **Model Management**: tiktoken 0.9.0, tokenizers 0.21.2
