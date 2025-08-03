@@ -41,6 +41,7 @@ def process_episode(episode_id: int):
         # Pass episode.show_name as show_slug for config loading
         ad_cuts = detect_ads_fast(episode.original_file_path, episode, episode.show_name)
         episode.ad_segments_json = json.dumps(ad_cuts) # Store detected ad segments
+        episode.fast_transcript_json = json.dumps(episode.fast_transcript_json) # Convert fast transcript to JSON string
         session.add(episode)
         session.commit()
         session.refresh(episode)
