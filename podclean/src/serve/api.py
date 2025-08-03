@@ -237,6 +237,16 @@ async def post_show_settings(
     except Exception as e:
         return RedirectResponse(url=f"/feeds/{show_name}/settings?message=Error saving settings: {e}&message_type=error", status_code=303)
 
+@app.get("/health")
+async def health_check():
+    try:
+        with get_session() as session:
+            # Try to get a simple count to check DB connection
+            episode_count = session.query(Episode).count()
+        return {"status": "ok", "database_connection": "successful", "episode_count": episode_count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Health check failed: {e}")
+
 @app.post("/mark")
 async def post_mark(mark_request: MarkRequest):
     with get_session() as session:
