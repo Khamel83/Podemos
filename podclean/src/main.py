@@ -29,11 +29,39 @@ def scheduled_job():
         except Exception as e:
             logger.error(f"Error polling feed {feed_url}: {e}")
 
-    # Process newly downloaded episodes
+    # Process newly downloaded episodes based on backlog processing strategy
+    backlog_strategy = app_config.backlog_processing.strategy
+    last_n_episodes_count = app_config.backlog_processing.last_n_episodes_count
+
     with get_session() as session:
-        new_episodes = session.query(Episode).filter_by(status='downloaded').all()
+        query = session.query(Episode).filter_by(status='downloaded')
+
+        if backlog_strategy == "newest_only":
+            # For each show, get only the newest downloaded episode
+            shows = session.query(Episode.show_name).distinct().all()
+            episode_ids_to_process = []
+            for show_name_tuple in shows:
+                show_name = show_name_tuple[0]
+                newest_episode = session.query(Episode).filter_by(show_name=show_name, status='downloaded').order_by(Episode.pub_date.desc()).first()
+                if newest_episode:
+                    episode_ids_to_process.append(newest_episode.id)
+            new_episodes = session.query(Episode).filter(Episode.id.in_(episode_ids_to_process)).all()
+
+        elif backlog_strategy == "last_n_episodes":
+            # For each show, get the last N downloaded episodes
+            shows = session.query(Episode.show_name).distinct().all()
+            episode_ids_to_process = []
+            for show_name_tuple in shows:
+                show_name = show_name_tuple[0]
+                latest_n_episodes = session.query(Episode).filter_by(show_name=show_name, status='downloaded').order_by(Episode.pub_date.desc()).limit(last_n_episodes_count).all()
+                episode_ids_to_process.extend([e.id for e in latest_n_episodes])
+            new_episodes = session.query(Episode).filter(Episode.id.in_(episode_ids_to_process)).all()
+
+        else: # "all" strategy or any other unrecognized strategy
+            new_episodes = query.all()
+
         if new_episodes:
-            logger.info(f"Found {len(new_episodes)} new episodes to process.")
+            logger.info(f"Found {len(new_episodes)} episodes to process based on backlog strategy '{backlog_strategy}'.")
             for episode in new_episodes:
                 try:
                     logger.info(f"Processing episode: {episode.title}")

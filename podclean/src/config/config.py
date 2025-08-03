@@ -19,6 +19,10 @@ class RetentionPolicyConfig(BaseModel):
     max_episodes_per_show: int = 10
     max_days_per_episode: int = 30
 
+class BacklogProcessingConfig(BaseModel):
+    strategy: str = "all" # "all", "newest_only", "last_n_episodes"
+    last_n_episodes_count: int = 5
+
 class AppConfig(BaseModel):
     # Server settings
     PODCLEAN_BASE_URL: str = "http://localhost:8080"
@@ -62,6 +66,9 @@ class AppConfig(BaseModel):
 
     # Retention Policy
     retention_policy: RetentionPolicyConfig = Field(default_factory=RetentionPolicyConfig)
+
+    # Backlog Processing
+    backlog_processing: BacklogProcessingConfig = Field(default_factory=BacklogProcessingConfig)
 
 class ShowRules(BaseModel):
     phrases: List[str] = Field(default_factory=list)
