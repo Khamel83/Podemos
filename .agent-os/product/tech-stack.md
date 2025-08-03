@@ -38,6 +38,7 @@
 - **Network Utilities**: aiohappyeyeballs 2.6.1
 
 ## User Interface
+- **Web Dashboard**: FastAPI-powered interface for managing feeds and monitoring status.
 - **Rich Terminal**: rich 14.0.0, click 8.1.8
 - **Progress Tracking**: tqdm 4.67.1
 - **Markdown Processing**: markdown-it-py 3.0.0, Pygments 2.19.2
@@ -51,7 +52,7 @@
 ## Security & Privacy
 - **Data Encryption**: Built-in Python cryptography
 - **Local Storage**: All data stored locally, no cloud dependencies
-- **API Security**: Rate limiting, authentication tokens
+- **API Security**: Basic authentication for feed access.
 - **Privacy First**: No external data transmission except for configured API calls
 
 ## Architecture Patterns
@@ -60,3 +61,4 @@
 - **Observer Pattern**: Event-driven processing pipeline
 - **Factory Pattern**: Content type processors and AI model selection
 - **Dependency Injection**: Configuration and service management
+- **Retry Mechanism**: Robust handling of transient failures during processing.

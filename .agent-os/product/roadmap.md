@@ -18,10 +18,16 @@ The following features have been implemented:
 - [x] **Content Deduplication** - Intelligent duplicate detection and prevention
 - [x] **Job Scheduling Infrastructure** - APScheduler foundation for automated processing
 - [x] **Testing Framework** - Comprehensive unit and integration tests (needs configuration fixes)
+- [x] **Automated Polling & Processing:** Implement a scheduler for periodic polling of feeds and processing of new episodes.
+- [x] **Basic Cleanup/Retention Policy:** Automatically delete old processed files after a configurable period or number of episodes to manage disk space.
+- [x] **Automated Backlog Prioritization:** Implement options to prioritize processing of newer episodes for news-based podcasts, or to process only a certain number of the latest episodes from a feed.
+- [x] **Basic Monitoring/Health Checks:** Add endpoints for remote monitoring of the system's health.
+- [x] **Simplified Feed Management:** CLI commands and web UI for direct manipulation of the feed list in `app.yaml`.
+- [x] **Decoupled Full Transcription:** Ad-free audio available faster.
+- [x] **Basic Authentication for Feed:** Feed can be secured.
 
 ## Phase 1: Current Development - Infrastructure Stabilization (3 weeks)
 
-- [x] **Automated Polling & Processing:** Implement a scheduler for periodic polling of feeds and processing of new episodes.
 - [ ] **Environment Setup Automation** - Create production-ready config/.env generation and setup wizard
 - [ ] **Testing Infrastructure Fix** - Resolve pytest configuration and run existing comprehensive test suite
 - [ ] **Documentation Accuracy** - Update README and docs to reflect actual current capabilities
@@ -30,8 +36,6 @@ The following features have been implemented:
 
 ## Phase 2: Advanced Features & Reliability (4 weeks)
 
-- [ ] **Automated Backlog Prioritization:** Implement options to prioritize processing of newer episodes for news-based podcasts, or to process only a certain number of the latest episodes from a feed.
-- [ ] **Basic Cleanup/Retention Policy:** Automatically delete old processed files after a configurable period or number of episodes to manage disk space.
 - [ ] **Apple Podcasts API Integration:** Utilize the Apple Podcasts API to search for each podcast and pull down all the information provided in a structured way for our database. It should always prioritize the data from the podcast provided directly but supplement it with any of the structured data we have and use that to make clean and orderly content.
 - [ ] **Performance Optimization** - Implement caching, concurrent processing, and memory management
 - [ ] **Full-Text Search Implementation** - Meilisearch integration for fast, typo-tolerant search
