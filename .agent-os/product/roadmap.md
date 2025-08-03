@@ -21,6 +21,7 @@ The following features have been implemented:
 
 ## Phase 1: Current Development - Infrastructure Stabilization (3 weeks)
 
+- [x] **Automated Polling & Processing:** Implement a scheduler for periodic polling of feeds and processing of new episodes.
 - [ ] **Environment Setup Automation** - Create production-ready config/.env generation and setup wizard
 - [ ] **Testing Infrastructure Fix** - Resolve pytest configuration and run existing comprehensive test suite
 - [ ] **Documentation Accuracy** - Update README and docs to reflect actual current capabilities
@@ -29,6 +30,9 @@ The following features have been implemented:
 
 ## Phase 2: Advanced Features & Reliability (4 weeks)
 
+- [ ] **Automated Backlog Prioritization:** Implement options to prioritize processing of newer episodes for news-based podcasts, or to process only a certain number of the latest episodes from a feed.
+- [ ] **Basic Cleanup/Retention Policy:** Automatically delete old processed files after a configurable period or number of episodes to manage disk space.
+- [ ] **Apple Podcasts API Integration:** Utilize the Apple Podcasts API to search for each podcast and pull down all the information provided in a structured way for our database. It should always prioritize the data from the podcast provided directly but supplement it with any of the structured data we have and use that to make clean and orderly content.
 - [ ] **Performance Optimization** - Implement caching, concurrent processing, and memory management
 - [ ] **Full-Text Search Implementation** - Meilisearch integration for fast, typo-tolerant search
 - [ ] **Advanced AI Integration** - Enhanced model selection, cost optimization, and fallback strategies  
