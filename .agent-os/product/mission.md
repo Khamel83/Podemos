@@ -20,6 +20,7 @@ Atlas provides a robust, self-owned solution for personal knowledge management a
 - **Future Intelligence**: Laying the groundwork for advanced personal modeling and intelligence extraction from a comprehensive data set.
 - **Personal Empowerment**: Empowering the user to leverage their own information for deeper insights and understanding.
 - **Automated Content Processing**: Automatically polls feeds and processes new episodes, reducing manual effort.
+- **Automated Cleanup/Retention**: Manages disk space by automatically deleting old processed files based on configurable policies.
 - **Apple Podcasts API Integration**: Utilize the Apple Podcasts API to search for each podcast and pull down all the information provided in a structured way for our database. It should always prioritize the data from the podcast provided directly but supplement it with any of the structured data we have and use that to make clean and orderly content.
 
 ## Non-Commercial Intent
