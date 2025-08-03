@@ -20,6 +20,70 @@ app_cfg: AppConfig = load_app_config()
 CLEANED_DIR = os.path.join(app_cfg.PODCLEAN_MEDIA_BASE_PATH, 'cleaned')
 TRANSCRIPTS_DIR = os.path.join(app_cfg.PODCLEAN_MEDIA_BASE_PATH, 'transcripts')
 
+def perform_full_transcription(episode_id: int):
+    with get_session() as session:
+        episode = session.query(Episode).filter_by(id=episode_id).first()
+        if not episode:
+            logger.error(f"Episode with ID {episode_id} not found for full transcription.")
+            return
+        if episode.status == 'transcribed':
+            logger.info(f"Episode {episode.id} already fully transcribed. Skipping.")
+            return
+        if not episode.cleaned_file_path or not os.path.exists(episode.cleaned_file_path):
+            logger.warning(f"Cleaned audio file not found for episode ID {episode.id}. Cannot perform full transcription.")
+            episode.status = 'full_transcription_failed' # Or a more appropriate error status
+            session.add(episode)
+            session.commit()
+            return
+
+        app_cfg = load_app_config() # Reload config for latest settings
+
+        if app_cfg.FULL_PASS_ENABLED:
+            logger.info(f"Initiating full transcription for episode: {episode.title}")
+            full_model_size = app_cfg.FULL_MODEL
+            full_vad = app_cfg.FULL_VAD
+            full_beam = app_cfg.FULL_BEAM
+            full_word_ts = app_cfg.FULL_WORD_TS
+
+            transcription_results = full_transcribe(
+                episode.cleaned_file_path, 
+                model_size=full_model_size, 
+                vad=full_vad, 
+                beam_size=full_beam, 
+                word_timestamps=full_word_ts
+            )
+
+            if transcription_results:
+                episode.transcript_json = json.dumps(transcription_results)
+                episode.status = 'transcribed'
+                # Save JSON transcript to file
+                if not os.path.exists(TRANSCRIPTS_DIR):
+                    os.makedirs(TRANSCRIPTS_DIR)
+                transcript_filename = f"{os.path.splitext(os.path.basename(episode.cleaned_file_path))[0]}.json"
+                transcript_filepath = os.path.join(TRANSCRIPTS_DIR, transcript_filename)
+                with open(transcript_filepath, 'w') as f:
+                    json.dump(transcription_results, f, indent=4)
+                logger.info(f"Full JSON transcript saved to: {transcript_filepath}")
+
+                # Generate and save Markdown transcript
+                md_content = format_transcript_to_md(episode.transcript_json)
+                md_filename = f"{os.path.splitext(os.path.basename(episode.cleaned_file_path))[0]}.md"
+                md_filepath = os.path.join(TRANSCRIPTS_DIR, md_filename)
+                with open(md_filepath, 'w') as f:
+                    f.write(md_content)
+                episode.md_transcript_file_path = md_filepath
+                logger.info(f"Markdown transcript saved to: {md_filepath}")
+            else:
+                episode.status = 'full_transcription_failed'
+                logger.error(f"Full transcription failed for episode ID {episode.id}.")
+
+            session.add(episode)
+            session.commit()
+            session.refresh(episode)
+        else:
+            logger.info(f"Full transcription pass is disabled for episode {episode.id}.")
+
+
 def process_episode(episode_id: int):
     with get_session() as session:
         episode = session.query(Episode).filter_by(id=episode_id).first()
@@ -53,7 +117,6 @@ def process_episode(episode_id: int):
             # For now, let's assume a dummy duration for testing purposes if not set
             episode.original_duration = 3600 # Dummy 1 hour for testing
             session.add(episode)
-            session.commit()
             session.refresh(episode)
 
         keep_segments = build_keep_segments(episode.original_duration, ad_cuts)
@@ -77,9 +140,7 @@ def process_episode(episode_id: int):
 
         if success:
             episode.cleaned_file_path = cleaned_output_path
-            episode.status = 'cut'
-            # TODO: Update cleaned_duration and cleaned_file_size after cutting
-            # This would require reading the metadata of the newly created file
+            episode.status = 'cut_ready_for_serving' # <--- NEW STATUS
             logger.info(f"Cleaned audio saved to: {cleaned_output_path}")
         else:
             episode.status = 'cut_failed'
@@ -100,51 +161,7 @@ def process_episode(episode_id: int):
             session.refresh(episode)
             logger.info(f"Chapters adjusted for episode ID {episode_id}.")
 
-        # 5. Full Transcription (Milestone E)
-        if app_cfg.FULL_PASS_ENABLED and episode.status == 'cut': # Only run if enabled and cut was successful
-            logger.info(f"Initiating full transcription for episode: {episode.title}")
-            full_model_size = app_cfg.FULL_MODEL
-            full_vad = app_cfg.FULL_VAD
-            full_beam = app_cfg.FULL_BEAM
-            full_word_ts = app_cfg.FULL_WORD_TS
-
-            transcription_results = full_transcribe(
-                episode.cleaned_file_path, 
-                model_size=full_model_size, 
-                vad=full_vad, 
-                beam_size=full_beam, 
-                word_timestamps=full_word_ts
-            )
-            
-            if transcription_results:
-                episode.transcript_json = json.dumps(transcription_results)
-                episode.status = 'transcribed'
-                # Save JSON transcript to file
-                if not os.path.exists(TRANSCRIPTS_DIR):
-                    os.makedirs(TRANSCRIPTS_DIR)
-                transcript_filename = f"{os.path.splitext(os.path.basename(episode.cleaned_file_path))[0]}.json"
-                transcript_filepath = os.path.join(TRANSCRIPTS_DIR, transcript_filename)
-                with open(transcript_filepath, 'w') as f:
-                    json.dump(transcription_results, f, indent=4)
-                logger.info(f"Full JSON transcript saved to: {transcript_filepath}")
-
-                # Generate and save Markdown transcript
-                md_content = format_transcript_to_md(episode.transcript_json)
-                md_filename = f"{os.path.splitext(os.path.basename(episode.cleaned_file_path))[0]}.md"
-                md_filepath = os.path.join(TRANSCRIPTS_DIR, md_filename)
-                with open(md_filepath, 'w') as f:
-                    f.write(md_content)
-                episode.md_transcript_file_path = md_filepath
-                logger.info(f"Markdown transcript saved to: {md_filepath}")
-            else:
-                episode.status = 'transcription_failed'
-                logger.error(f"Full transcription failed for episode ID {episode_id}.")
-            
-            session.add(episode)
-            session.commit()
-            session.refresh(episode)
-
-        logger.info(f"Finished processing episode: {episode.title} with status: {episode.status}")
+        logger.info(f"Finished initial processing for episode: {episode.title} with status: {episode.status}")
 
 if __name__ == "__main__":
     # Example usage (requires a populated database and audio files)

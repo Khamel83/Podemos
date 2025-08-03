@@ -34,42 +34,47 @@ def scheduled_job():
     last_n_episodes_count = app_config.backlog_processing.last_n_episodes_count
 
     with get_session() as session:
-        query = session.query(Episode).filter_by(status='downloaded')
-
-        if backlog_strategy == "newest_only":
-            # For each show, get only the newest downloaded episode
-            shows = session.query(Episode.show_name).distinct().all()
-            episode_ids_to_process = []
-            for show_name_tuple in shows:
-                show_name = show_name_tuple[0]
-                newest_episode = session.query(Episode).filter_by(show_name=show_name, status='downloaded').order_by(Episode.pub_date.desc()).first()
-                if newest_episode:
-                    episode_ids_to_process.append(newest_episode.id)
-            new_episodes = session.query(Episode).filter(Episode.id.in_(episode_ids_to_process)).all()
-
-        elif backlog_strategy == "last_n_episodes":
-            # For each show, get the last N downloaded episodes
-            shows = session.query(Episode.show_name).distinct().all()
-            episode_ids_to_process = []
-            for show_name_tuple in shows:
-                show_name = show_name_tuple[0]
-                latest_n_episodes = session.query(Episode).filter_by(show_name=show_name, status='downloaded').order_by(Episode.pub_date.desc()).limit(last_n_episodes_count).all()
-                episode_ids_to_process.extend([e.id for e in latest_n_episodes])
-            new_episodes = session.query(Episode).filter(Episode.id.in_(episode_ids_to_process)).all()
-
-        else: # "all" strategy or any other unrecognized strategy
-            new_episodes = query.all()
-
-        if new_episodes:
-            logger.info(f"Found {len(new_episodes)} episodes to process based on backlog strategy '{backlog_strategy}'.")
-            for episode in new_episodes:
+        # Process newly downloaded episodes (ad detection and cutting)
+        new_episodes_for_initial_processing = session.query(Episode).filter_by(status='downloaded').all()
+        if new_episodes_for_initial_processing:
+            logger.info(f"Found {len(new_episodes_for_initial_processing)} episodes for initial processing.")
+            for episode in new_episodes_for_initial_processing:
                 try:
-                    logger.info(f"Processing episode: {episode.title}")
+                    logger.info(f"Performing initial processing (ad detection, cutting) for episode: {episode.title}")
                     process_episode(episode.id)
                 except Exception as e:
-                    logger.error(f"Error processing episode {episode.id}: {e}")
+                    logger.error(f"Error during initial processing of episode {episode.id}: {e}")
         else:
-            logger.info("No new episodes to process.")
+            logger.info("No new episodes for initial processing.")
+
+        # Process episodes ready for full transcription based on backlog strategy
+        episodes_for_full_transcription = []
+        if backlog_strategy == "newest_only":
+            shows = session.query(Episode.show_name).distinct().all()
+            for show_name_tuple in shows:
+                show_name = show_name_tuple[0]
+                newest_episode = session.query(Episode).filter_by(show_name=show_name, status='cut_ready_for_serving').order_by(Episode.pub_date.desc()).first()
+                if newest_episode:
+                    episodes_for_full_transcription.append(newest_episode)
+        elif backlog_strategy == "last_n_episodes":
+            shows = session.query(Episode.show_name).distinct().all()
+            for show_name_tuple in shows:
+                show_name = show_name_tuple[0]
+                latest_n_episodes = session.query(Episode).filter_by(show_name=show_name, status='cut_ready_for_serving').order_by(Episode.pub_date.desc()).limit(last_n_episodes_count).all()
+                episodes_for_full_transcription.extend(latest_n_episodes)
+        else: # "all" strategy or any other unrecognized strategy
+            episodes_for_full_transcription = session.query(Episode).filter_by(status='cut_ready_for_serving').all()
+
+        if episodes_for_full_transcription:
+            logger.info(f"Found {len(episodes_for_full_transcription)} episodes for full transcription based on backlog strategy '{backlog_strategy}'.")
+            for episode in episodes_for_full_transcription:
+                try:
+                    logger.info(f"Performing full transcription for episode: {episode.title}")
+                    perform_full_transcription(episode.id)
+                except Exception as e:
+                    logger.error(f"Error during full transcription of episode {episode.id}: {e}")
+        else:
+            logger.info("No episodes ready for full transcription.")
 
     # Run cleanup job
     from src.store.cleanup import cleanup_old_episodes
